@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/breadcrumb"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { ArrowLeft, Download, FullscreenIcon as FullScreen, RotateCcw, ZoomIn, ZoomOut } from "lucide-react"
+import { ArrowLeft, Download, FullscreenIcon as FullScreen, ZoomIn, ZoomOut } from "lucide-react"
 import { toast } from "react-toastify"
 
 export default function HockeyDashboard() {
@@ -28,42 +28,47 @@ export default function HockeyDashboard() {
   const rinkRef = React.useRef<() => void>(null)
 
   const handleExportData = () => {
-    // Create sample data for export
-    const exportData = {
-      game: {
-        homeTeam: selectedGame.homeTeam,
-        awayTeam: selectedGame.awayTeam,
-        date: selectedGame.date,
-        score: selectedGame.score,
-      },
-      currentTime: currentTime,
-      visualizations: {
-        opacity: opacity,
-        timestamp: new Date().toISOString(),
-      },
-      players: [
-        { name: "A. Matthews", team: "home", goals: 2, assists: 1, shots: 6 },
-        { name: "M. Marner", team: "home", goals: 1, assists: 2, shots: 4 },
-        { name: "D. Pastrnak", team: "away", goals: 1, assists: 0, shots: 5 },
-        { name: "B. Marchand", team: "away", goals: 1, assists: 1, shots: 3 },
-      ],
+    try {
+      // Create sample data for export
+      const exportData = {
+        game: {
+          homeTeam: selectedGame.homeTeam,
+          awayTeam: selectedGame.awayTeam,
+          date: selectedGame.date,
+          score: selectedGame.score,
+        },
+        currentTime: currentTime,
+        visualizations: {
+          opacity: opacity,
+          timestamp: new Date().toISOString(),
+        },
+        players: [
+          { name: "A. Matthews", team: "home", goals: 2, assists: 1, shots: 6 },
+          { name: "M. Marner", team: "home", goals: 1, assists: 2, shots: 4 },
+          { name: "D. Pastrnak", team: "away", goals: 1, assists: 0, shots: 5 },
+          { name: "B. Marchand", team: "away", goals: 1, assists: 1, shots: 3 },
+        ],
+      }
+
+      // Create and download JSON file
+      const dataStr = JSON.stringify(exportData, null, 2)
+      const dataBlob = new Blob([dataStr], { type: "application/json" })
+      const url = URL.createObjectURL(dataBlob)
+      const link = document.createElement("a")
+      link.href = url
+      link.download = `hockey-analytics-${selectedGame.homeTeam}-vs-${selectedGame.awayTeam}-${new Date()
+        .toISOString()
+        .split("T")[0]}.json`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
+
+      toast.success("Game analytics data has been downloaded as JSON file.")
+    } catch (error) {
+      console.error(error)
+      toast.error("Failed to export game analytics data. Please try again.")
     }
-
-    // Create and download JSON file
-    const dataStr = JSON.stringify(exportData, null, 2)
-    const dataBlob = new Blob([dataStr], { type: "application/json" })
-    const url = URL.createObjectURL(dataBlob)
-    const link = document.createElement("a")
-    link.href = url
-    link.download = `hockey-analytics-${selectedGame.homeTeam}-vs-${selectedGame.awayTeam}-${new Date().toISOString().split("T")[0]}.json`
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    URL.revokeObjectURL(url)
-
-    toast.success("Game analytics data has been downloaded as JSON file.", {
-      position: "top-right",
-    })
   }
 
   const handleResetView = () => {
@@ -79,10 +84,6 @@ export default function HockeyDashboard() {
     })
   }
 
-  const handleGlobalReset = () => {
-    handleResetView()
-  }
-
   if (!selectedGame) {
     return <GameSelection onGameSelect={setSelectedGame} />
   }
@@ -95,8 +96,6 @@ export default function HockeyDashboard() {
         onViewModeChange={setViewMode}
         opacity={opacity}
         onOpacityChange={setOpacity}
-        onExportData={handleExportData}
-        onResetView={handleResetView}
       />
       <SidebarInset>
         <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
@@ -120,10 +119,6 @@ export default function HockeyDashboard() {
             <Button variant="outline" size="sm" onClick={() => setSelectedGame(null)}>
               <ArrowLeft className="h-4 w-4" />
               Back to Games
-            </Button>
-            <Button variant="outline" size="sm" onClick={handleGlobalReset}>
-              <RotateCcw className="h-4 w-4" />
-              Reset
             </Button>
             <Button variant="outline" size="sm" onClick={handleExportData}>
               <Download className="h-4 w-4" />
@@ -184,7 +179,7 @@ export default function HockeyDashboard() {
                       currentTime={currentTime}
                       opacity={opacity}
                       selectedGame={selectedGame}
-                      onResetView={rinkRef.current || undefined}
+                      ref={rinkRef}
                     />
                   </div>
                 </CardContent>

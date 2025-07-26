@@ -199,7 +199,7 @@ export function TimelineScrubber({ onTimeChange }: TimelineScrubberProps) {
           )}
 
           {/* Event Legend */}
-          <div className="flex items-center gap-4 text-xs">
+          <div className="flex items-center gap-4 mt-8 text-xs">
             <div className="flex items-center gap-1">
               <div className="w-3 h-3 bg-green-500 rounded-sm" />
               <span>Goals</span>

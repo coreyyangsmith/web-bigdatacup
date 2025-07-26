@@ -1,5 +1,5 @@
 import type * as React from "react"
-import { BarChart3, Eye, Layers, Settings, Target, Users, Table, RatIcon as Rink } from "lucide-react"
+import { BarChart3, Eye, Layers, Target, Users, Table, RatIcon as Rink } from "lucide-react"
 
 import {
   Sidebar,
@@ -64,8 +64,6 @@ interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
   onViewModeChange: (mode: "rink" | "table") => void
   opacity: number
   onOpacityChange: (opacity: number) => void
-  onExportData: () => void
-  onResetView: () => void
 }
 
 export function AppSidebar({
@@ -74,8 +72,7 @@ export function AppSidebar({
   onViewModeChange,
   opacity,
   onOpacityChange,
-  onExportData,
-  onResetView,
+  // Settings callbacks reserved
   ...props
 }: AppSidebarProps) {
   return (
@@ -168,7 +165,7 @@ export function AppSidebar({
                           <Label htmlFor={item.name} className="text-sm font-normal">
                             {item.name}
                           </Label>
-                          <Switch id={item.name} defaultChecked={item.active} size="sm" />
+                          <Switch id={item.name} defaultChecked={item.active} />
                         </div>
                       ))}
                     </div>
@@ -224,30 +221,7 @@ export function AppSidebar({
             </SidebarGroupContent>
           </SidebarGroup>
 
-          <SidebarSeparator />
-
-          <SidebarGroup>
-            <SidebarGroupLabel className="flex items-center gap-2">
-              <Settings className="h-4 w-4" />
-              Settings
-            </SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                <SidebarMenuItem>
-                  <SidebarMenuButton onClick={onExportData}>
-                    <Settings className="h-4 w-4" />
-                    <span>Export Data</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <SidebarMenuButton onClick={onResetView}>
-                    <Settings className="h-4 w-4" />
-                    <span>Reset View</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
+          {/* Settings group reserved for future options */}
         </SidebarContent>
       )}
 
