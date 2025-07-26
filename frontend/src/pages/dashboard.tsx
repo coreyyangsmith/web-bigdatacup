@@ -132,7 +132,7 @@ export default function HockeyDashboard() {
           </div>
         </header>
 
-        <div className="flex flex-1 flex-col gap-4 p-4">
+        <div className="flex flex-1 min-h-0 flex-col gap-4 p-4 overflow-hidden">
           {viewMode === "rink" && (
             <>
               <div className="grid auto-rows-min gap-4 md:grid-cols-4">
@@ -162,7 +162,7 @@ export default function HockeyDashboard() {
                 </Card>
               </div>
 
-              <Card className="flex-1">
+              <Card className="flex-1 flex flex-col overflow-auto">
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <div>
@@ -171,36 +171,28 @@ export default function HockeyDashboard() {
                         Interactive hockey rink with overlaid analytics data - drag to pan, scroll to zoom
                       </CardDescription>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Button variant="outline" size="sm" disabled>
-                        <ZoomOut className="h-4 w-4" />
-                      </Button>
-                      <Button variant="outline" size="sm" disabled>
-                        <ZoomIn className="h-4 w-4" />
-                      </Button>
-                      <Button variant="outline" size="sm" disabled>
-                        <FullScreen className="h-4 w-4" />
-                      </Button>
-                    </div>
+
                   </div>
                 </CardHeader>
-                <CardContent className="p-6">
-                  <div className="w-full h-[500px]">
+                <CardContent className="flex-1 p-0 overflow-auto">
+                  <div className="w-full h-full">
                     <PannableHockeyRink
-                      width={900}
-                      height={450}
+                      width={1000}
+                      height={400}
                       showGrid={true}
                       showZones={true}
                       currentTime={currentTime}
                       opacity={opacity}
                       selectedGame={selectedGame}
-                      onResetView={rinkRef.current}
+                      onResetView={rinkRef.current || undefined}
                     />
                   </div>
                 </CardContent>
               </Card>
 
-              <TimelineScrubber onTimeChange={setCurrentTime} />
+              <div className="flex-none">
+                <TimelineScrubber onTimeChange={setCurrentTime} />
+              </div>
             </>
           )}
 

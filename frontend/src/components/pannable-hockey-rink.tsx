@@ -24,6 +24,7 @@ interface PannableHockeyRinkProps {
 
 export function PannableHockeyRink({ width = 900, height = 450, onResetView, ...rinkProps }: PannableHockeyRinkProps) {
   const containerRef = React.useRef<HTMLDivElement>(null)
+  const [containerSize, setContainerSize] = React.useState<{ width: number; height: number }>({ width, height })
   const [transform, setTransform] = React.useState({ x: 0, y: 0, scale: 1 })
   const [isDragging, setIsDragging] = React.useState(false)
   const [dragStart, setDragStart] = React.useState({ x: 0, y: 0 })
@@ -81,6 +82,7 @@ export function PannableHockeyRink({ width = 900, height = 450, onResetView, ...
   }
 
   React.useEffect(() => {
+    // Drag handlers across the document
     const handleGlobalMouseUp = () => setIsDragging(false)
     const handleGlobalMouseMove = (e: MouseEvent) => {
       if (!isDragging) return
@@ -105,6 +107,27 @@ export function PannableHockeyRink({ width = 900, height = 450, onResetView, ...
       document.removeEventListener("mouseup", handleGlobalMouseUp)
     }
   }, [isDragging, dragStart, lastTransform])
+
+  // Resize observer to fill available space
+  React.useEffect(() => {
+    if (!containerRef.current) return
+
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0]
+      if (entry) {
+        const { width: w, height: h } = entry.contentRect
+        setContainerSize({ width: w, height: h })
+      }
+    })
+
+    observer.observe(containerRef.current)
+
+    // Initial size
+    const { width: w, height: h } = containerRef.current.getBoundingClientRect()
+    setContainerSize({ width: w, height: h })
+
+    return () => observer.disconnect()
+  }, [])
 
   // Expose reset function to parent
   React.useImperativeHandle(onResetView, () => resetView, [])
@@ -140,7 +163,7 @@ export function PannableHockeyRink({ width = 900, height = 450, onResetView, ...
             transition: isDragging ? "none" : "transform 0.1s ease-out",
           }}
         >
-          <HockeyRink width={width} height={height} {...rinkProps} />
+          <HockeyRink width={Math.max(width, containerSize.width)} height={Math.max(height, containerSize.height)} {...rinkProps} />
         </div>
       </div>
     </div>
