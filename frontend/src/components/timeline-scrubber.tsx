@@ -22,7 +22,14 @@ interface TimelineEvent {
   type: string // raw lowercase event name
   description: string
   player?: string | null
+  player_2?: string | null
   team: string
+  home_team_skaters: number
+  away_team_skaters: number
+  detail_1?: string | null
+  detail_2?: string | null
+  detail_3?: string | null
+  detail_4?: string | null
 }
 
 interface TimelineScrubberProps {
@@ -54,7 +61,14 @@ export function TimelineScrubber({ events, selectedPlayer, selectedTeam, eventTy
           type: (e.event as string).toLowerCase(),
           description: e.event ?? "",
           player: e.player,
+          player_2: e.player_2,
           team: e.team,
+          home_team_skaters: e.home_team_skaters,
+          away_team_skaters: e.away_team_skaters,
+          detail_1: e.detail_1,
+          detail_2: e.detail_2,
+          detail_3: e.detail_3,
+          detail_4: e.detail_4,
         }
       })
   }, [events])
@@ -91,9 +105,30 @@ export function TimelineScrubber({ events, selectedPlayer, selectedTeam, eventTy
     return boundaries
   }, [filteredEvents])
 
+  // Period colored segments (P1, P2, P3, OT...)
+  const PERIOD_SECONDS = 20 * 60
+  const periodSegments = React.useMemo(() => {
+    const segments: { start: number; end: number; idx: number }[] = []
+    if (maxTime === 0) return segments
+    const num = Math.ceil(maxTime / PERIOD_SECONDS)
+    for (let i = 0; i < num; i++) {
+      segments.push({ start: i * PERIOD_SECONDS, end: Math.min((i + 1) * PERIOD_SECONDS, maxTime), idx: i })
+    }
+    return segments
+  }, [maxTime])
+
   const [currentTime, setCurrentTime] = React.useState([0])
   const [isPlaying, setIsPlaying] = React.useState(false)
-  const [selectedEvent, setSelectedEvent] = React.useState<TimelineEvent | null>(null)
+  const [selectedEvents, setSelectedEvents] = React.useState<TimelineEvent[]>([])
+  const [selectedEvent, setSelectedEvent] = React.useState<TimelineEvent | null>(null) // first of selectedEvents for backward compatibility
+
+  // Debug: print selected event data
+  React.useEffect(() => {
+    if (selectedEvent) {
+      // eslint-disable-next-line no-console
+      console.log("Selected Event:", selectedEvent)
+    }
+  }, [selectedEvent])
 
   const formatTime = (seconds: number) => {
     const PERIOD_SECONDS = 20 * 60
@@ -110,12 +145,23 @@ export function TimelineScrubber({ events, selectedPlayer, selectedTeam, eventTy
 
     // Find nearest event within 3s window
     const nearbyEvent = filteredEvents.find((event) => Math.abs(event.time - value[0]) < 3)
-    setSelectedEvent(nearbyEvent || null)
+
+    if (nearbyEvent) {
+      const sameTimeEvents = filteredEvents.filter((ev) => Math.abs(ev.time - nearbyEvent.time) < 1)
+      setSelectedEvents(sameTimeEvents)
+      setSelectedEvent(sameTimeEvents[0] ?? null)
+    } else {
+      setSelectedEvents([])
+      setSelectedEvent(null)
+    }
   }
 
   const jumpToEvent = (event: TimelineEvent) => {
     setCurrentTime([event.time])
     onTimeChange(event.time)
+
+    const sameTimeEvents = filteredEvents.filter((ev) => Math.abs(ev.time - event.time) < 1)
+    setSelectedEvents(sameTimeEvents)
     setSelectedEvent(event)
   }
 
@@ -152,11 +198,13 @@ export function TimelineScrubber({ events, selectedPlayer, selectedTeam, eventTy
     const nextEvent = getNextEvent()
     if (nextEvent) jumpToEvent(nextEvent)
   }
-
   return (
     <Card className="w-full">
-      <CardContent className="p-4">
+      <CardContent>
         <div className="space-y-4">
+          {/* Title */}
+          <h3 className="text-lg font-semibold">Game Timeline</h3>
+
           {/* Timeline Controls */}
           <div className="flex items-center gap-4">
             <Button variant="outline" size="sm" onClick={() => handleTimeChange([0])}>
@@ -180,37 +228,55 @@ export function TimelineScrubber({ events, selectedPlayer, selectedTeam, eventTy
 
           {/* Timeline Slider */}
           <div className="relative">
+            {/* Period colored bars */}
+            <div className="absolute -top-1 w-full h-1 pointer-events-none z-0">
+              {periodSegments.map((seg) => {
+                const colors = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6"]
+                const color = colors[seg.idx % colors.length]
+                const left = (seg.start / maxTime) * 100
+                const width = ((seg.end - seg.start) / maxTime) * 100
+                return (
+                  <div
+                    key={seg.idx}
+                    className="absolute h-full"
+                    style={{ left: `${left}%`, width: `${width}%`, backgroundColor: color }}
+                  />
+                )
+              })}
+            </div>
+
             <Slider
               value={currentTime}
               onValueChange={handleTimeChange}
               max={maxTime}
               min={0}
               step={1}
-              className="w-full"
+              className="w-full z-20"
             />
 
             {/* Period separation lines */}
-            <div className="absolute top-0 left-0 w-full h-6 pointer-events-none">
-              {periodBoundaries.map((t, idx) => (
+            <div className="absolute top-0 left-0 w-full h-8 pointer-events-none z-10">
+              {periodSegments.map((seg, idx) => (
                 idx > 0 && (
                   <div
                     key={`period-${idx}`}
-                    className="absolute top-0 h-6 border-l border-border text-[10px] text-muted-foreground select-none"
-                    style={{ left: `${(t / maxTime) * 100}%` }}
+                    className="absolute top-0 h-8 border-l border-border text-[10px] text-muted-foreground select-none"
+                    style={{ left: `${(seg.start / maxTime) * 100}%` }}
                   >
-                    <span className="absolute -top-4 -ml-2">{idx + 1 <= 3 ? `P${idx + 1}` : "OT"}</span>
+                    <span className="absolute -top-5 -ml-2">{idx + 1 <= 3 ? `P${idx + 1}` : "OT"}</span>
                   </div>
                 )
               ))}
             </div>
 
+
             {/* Event Markers */}
-            <div className="absolute top-0 left-0 w-full h-6 pointer-events-none">
+            <div className="absolute top-2 left-0 w-full h-6 pointer-events-none">
               {filteredEvents.map((event) => (
                 <div
                   key={event.id}
                   className="absolute top-0 w-2 h-6 cursor-pointer pointer-events-auto"
-                  style={{ left: `${(event.time / maxTime) * 100}%` }}
+                  style={{ left: `calc(${(event.time / maxTime) * 100}% - 4px)` }}
                   onClick={() => jumpToEvent(event)}
                 >
                   <div
@@ -223,24 +289,60 @@ export function TimelineScrubber({ events, selectedPlayer, selectedTeam, eventTy
           </div>
 
           {/* Event Details */}
-          {selectedEvent && (
-            <div className="flex items-center gap-2 p-2 bg-muted rounded-lg mt-8">
-              <Badge
-                style={{
-                  backgroundColor: eventTypeColors[selectedEvent.type] ?? "#64748b",
-                  color: "white",
-                }}
-              >
-                {selectedEvent.type.toUpperCase()}
-              </Badge>
-              <span className="text-sm font-medium">{formatTime(selectedEvent.time)}</span>
-              <span className="text-sm">{selectedEvent.description}</span>
-              {selectedEvent.player && <span className="text-sm text-muted-foreground">({selectedEvent.player})</span>}
-            </div>
-          )}
-
+          <div className="flex flex-col gap-2 p-3 bg-muted rounded-lg min-h-[60px] mt-12">
+            {selectedEvents.length > 0 ? (
+              selectedEvents.map((ev) => (
+                <div key={ev.id} className="space-y-1 border-b last:border-b-0 pb-2 last:pb-0">
+                  {/* Primary line */}
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge
+                      style={{
+                        backgroundColor: eventTypeColors[ev.type] ?? "#64748b",
+                        color: "white",
+                      }}
+                    >
+                      {ev.type.toUpperCase()}
+                    </Badge>
+                    {[ev.detail_1, ev.detail_2, ev.detail_3, ev.detail_4]
+                      .filter(Boolean)
+                      .map((d, idx) => (
+                        <span
+                          key={`tag-${ev.id}-${idx}`}
+                          className="text-xs bg-muted px-1 py-0.5 rounded-sm border border-border text-foreground/90"
+                        >
+                          {d as string}
+                        </span>
+                      ))}
+                    <span className="text-sm font-medium">{formatTime(ev.time)}</span>
+                    <span className="text-sm">{ev.description}</span>
+                    {(ev.player || ev.player_2) && (
+                      <span className="text-sm text-muted-foreground">
+                        ({[ev.player, ev.player_2].filter(Boolean).join(", ")})
+                      </span>
+                    )}
+                  </div>
+                  {/* Secondary line */}
+                  {(ev.team || ev.home_team_skaters || ev.away_team_skaters) && (
+                    <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                      {ev.team && (
+                        <span>
+                          Team: <span className="text-foreground font-medium">{ev.team}</span>
+                        </span>
+                      )}
+                      <span>
+                        Skaters – Home: <span className="text-foreground font-medium">{ev.home_team_skaters}</span>,
+                        Away: <span className="text-foreground font-medium">{ev.away_team_skaters}</span>
+                      </span>
+                    </div>
+                  )}
+                </div>
+              ))
+            ) : (
+              <span className="text-sm text-muted-foreground">(No Event)</span>
+            )}
+          </div>
           {/* Event Legend */}
-          <div className="mt-8">
+          <div className="mt-4">
             <h4 className="text-sm font-semibold mb-3">Event Legend</h4>
             <div className="flex flex-wrap gap-x-6 gap-y-3 text-xs">
               {/* Scoring Events */}

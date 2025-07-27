@@ -22,6 +22,8 @@ export interface Event {
   away_team: string;
   period: number;
   clock: string;
+  home_team_skaters: number;
+  away_team_skaters: number;
   team: string;
   player: string;
   event: string;

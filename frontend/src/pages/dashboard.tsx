@@ -407,123 +407,127 @@ export default function HockeyDashboard() {
             </Button>
           </div>
         </header>
-
         <div className="flex flex-1 min-h-0 flex-col gap-4 p-4 overflow-hidden">
           {viewMode === "rink" && (
             <>
-              <div className="grid auto-rows-min gap-4 md:grid-cols-4">
+              {/* Controls Section */}
+              <div className="space-y-4 flex-none">
+                {/* Stats Cards */}
+                <div className="grid auto-rows-min gap-4 md:grid-cols-4">
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardDescription>Total Shots</CardDescription>
+                      <CardTitle className="text-2xl">
+                        {events ? playerStats.shots : "-"}
+                      </CardTitle>
+                    </CardHeader>
+                  </Card>
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardDescription>Goals</CardDescription>
+                      <CardTitle className="text-2xl">
+                        {events ? playerStats.goals : "-"}
+                      </CardTitle>
+                    </CardHeader>
+                  </Card>
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardDescription>Possession Time</CardDescription>
+                      <CardTitle className="text-2xl">
+                        {selectedPlayer === "all" && selectedTeam === "all" ? "-" : formatTime(playerStats.possession)}
+                      </CardTitle>
+                    </CardHeader>
+                  </Card>
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardDescription>Zone Entries</CardDescription>
+                      <CardTitle className="text-2xl">23</CardTitle>
+                    </CardHeader>
+                  </Card>
+                </div>
+
+                {/* Team & Player Analysis Controls */}
                 <Card>
-                  <CardHeader className="pb-2">
-                    <CardDescription>Total Shots</CardDescription>
-                    <CardTitle className="text-2xl">
-                      {events ? playerStats.shots : "-"}
-                    </CardTitle>
-                  </CardHeader>
-                </Card>
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardDescription>Goals</CardDescription>
-                    <CardTitle className="text-2xl">
-                      {events ? playerStats.goals : "-"}
-                    </CardTitle>
-                  </CardHeader>
-                </Card>
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardDescription>Possession Time</CardDescription>
-                    <CardTitle className="text-2xl">
-                      {selectedPlayer === "all" && selectedTeam === "all" ? "-" : formatTime(playerStats.possession)}
-                    </CardTitle>
-                  </CardHeader>
-                </Card>
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardDescription>Zone Entries</CardDescription>
-                    <CardTitle className="text-2xl">23</CardTitle>
+                  <CardHeader className="pb-4">
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-1">
+                        <CardTitle>Hockey Rink Visualization</CardTitle>
+                        <CardDescription>
+                          Interactive hockey rink with overlaid analytics data - drag to pan, scroll to zoom
+                        </CardDescription>
+                      </div>
+
+                      <div className="flex items-center gap-4">
+                        {/* Team Select */}
+                        <div className="flex items-center gap-2">
+                          <Label className="text-sm">Team:</Label>
+                          <Select
+                            value={selectedTeam}
+                            onValueChange={(val) => {
+                              setSelectedTeam(val)
+                              setSelectedPlayer("all") // reset player when team changes
+                            }}
+                          >
+                            <SelectTrigger className="w-48 h-8">
+                              <SelectValue placeholder="All Teams" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="all">All Teams</SelectItem>
+                              <SelectSeparator />
+                              <SelectItem value={selectedGame.homeTeam.toLowerCase()}>{selectedGame.homeTeam}</SelectItem>
+                              <SelectItem value={selectedGame.awayTeam.toLowerCase()}>{selectedGame.awayTeam}</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        {/* Player Select */}
+                        <div className="flex items-center gap-2">
+                          <Label className="text-sm">Player:</Label>
+                          <Select value={selectedPlayer} onValueChange={setSelectedPlayer}>
+                            <SelectTrigger className="w-40 h-8">
+                              <SelectValue placeholder="All Players" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="all">All Players</SelectItem>
+                              <SelectSeparator />
+                              {gamePlayers
+                                .filter((p) => selectedTeam === "all" || playerTeamMap[p.name.toLowerCase()]?.toLowerCase() === selectedTeam.toLowerCase())
+                                .map((p) => (
+                                  <SelectItem key={p.id} value={p.name.toLowerCase()}>
+                                    {teamAbbr(playerTeamMap[p.name.toLowerCase()])} - {p.name}
+                                  </SelectItem>
+                                ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                    </div>
                   </CardHeader>
                 </Card>
               </div>
 
-              <Card className="flex-1 flex flex-col overflow-auto">
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-1">
-                      <CardTitle>Hockey Rink Visualization</CardTitle>
-                      <CardDescription>
-                        Interactive hockey rink with overlaid analytics data - drag to pan, scroll to zoom
-                      </CardDescription>
-                    </div>
-
-                    {/* Team & Player Analysis Selects */}
-                    <div className="flex items-center gap-4">
-                      {/* Team Select */}
-                      <div className="flex items-center gap-2">
-                        <Label className="text-sm">Team:</Label>
-                        <Select
-                          value={selectedTeam}
-                          onValueChange={(val) => {
-                            setSelectedTeam(val)
-                            setSelectedPlayer("all") // reset player when team changes
-                          }}
-                        >
-                          <SelectTrigger className="w-48 h-8">
-                            <SelectValue placeholder="All Teams" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="all">All Teams</SelectItem>
-                            <SelectSeparator />
-                            <SelectItem value={selectedGame.homeTeam.toLowerCase()}>{selectedGame.homeTeam}</SelectItem>
-                            <SelectItem value={selectedGame.awayTeam.toLowerCase()}>{selectedGame.awayTeam}</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      {/* Player Select */}
-                      <div className="flex items-center gap-2">
-                        <Label className="text-sm">Player:</Label>
-                        <Select value={selectedPlayer} onValueChange={setSelectedPlayer}>
-                          <SelectTrigger className="w-40 h-8">
-                            <SelectValue placeholder="All Players" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="all">All Players</SelectItem>
-                            <SelectSeparator />
-                            {gamePlayers
-                              .filter((p) => selectedTeam === "all" || playerTeamMap[p.name.toLowerCase()]?.toLowerCase() === selectedTeam.toLowerCase())
-                              .map((p) => (
-                                <SelectItem key={p.id} value={p.name.toLowerCase()}>
-                                  {teamAbbr(playerTeamMap[p.name.toLowerCase()])} - {p.name}
-                                </SelectItem>
-                              ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="flex-1 p-0 overflow-auto">
-                  <div className="w-full h-full">
-                    <PannableHockeyRink
-                      width={1000}
-                      height={400}
-                      showGrid={showGrid}
-                      showZones={showZones}
-                      showNumbers={showNumbers}
-                      currentTime={currentTime}
-                      opacity={opacity}
-                      selectedGame={selectedGame}
-                      shotCoordinates={filteredShotCoords}
-                      goalCoordinates={filteredGoalCoords}
-                      playerNumbers={playerNumbers}
-                      homeColor={homeColor}
-                      awayColor={awayColor}
-                      visualizations={visualizations}
-                      activeEvents={activeEvents}
-                      ref={rinkRef}
-                    />
-                  </div>
-                </CardContent>
-              </Card>
+              {/* Hockey Rink - Takes up remaining space */}
+              <div className="flex-1 min-h-0">
+                <PannableHockeyRink
+                  width={1000}
+                  height={400}
+                  showGrid={showGrid}
+                  showZones={showZones}
+                  showNumbers={showNumbers}
+                  currentTime={currentTime}
+                  opacity={opacity}
+                  selectedGame={selectedGame}
+                  shotCoordinates={filteredShotCoords}
+                  goalCoordinates={filteredGoalCoords}
+                  playerNumbers={playerNumbers}
+                  homeColor={homeColor}
+                  awayColor={awayColor}
+                  visualizations={visualizations}
+                  activeEvents={activeEvents}
+                  eventColors={eventTypeColors}
+                  ref={rinkRef}
+                />
+              </div>
 
               <div className="flex-none">
                 <TimelineScrubber

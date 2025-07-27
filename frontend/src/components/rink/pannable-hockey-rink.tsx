@@ -26,10 +26,11 @@ interface PannableHockeyRinkProps {
   playerNumbers?: Record<string, number | null>
   homeColor?: string
   awayColor?: string
+  eventColors?: Record<string, string>
 }
 
 export const PannableHockeyRink = React.forwardRef<() => void, PannableHockeyRinkProps>(
-  ({ width = 900, height = 450, shotCoordinates = [], goalCoordinates = [], activeEvents = [], playerNumbers = {}, homeColor, awayColor, ...rinkProps }, ref) => {
+  ({ width = 1000, height = 500, shotCoordinates = [], goalCoordinates = [], activeEvents = [], playerNumbers = {}, homeColor, awayColor, ...rinkProps }, ref) => {
     const containerRef = React.useRef<HTMLDivElement>(null)
     const [containerSize, setContainerSize] = React.useState<{ width: number; height: number }>({ width, height })
     const [transform, setTransform] = React.useState({ x: 0, y: 0, scale: 1 })
@@ -169,15 +170,21 @@ export const PannableHockeyRink = React.forwardRef<() => void, PannableHockeyRin
               transition: isDragging ? "none" : "transform 0.1s ease-out",
             }}
           >
+            {/*
+             Preserve the rink’s intrinsic dimensions so it never resizes with the
+             parent container.  Users can still pan/zoom to explore the full
+             surface without the SVG itself scaling up or down.
+            */}
             <HockeyRink
-              width={Math.max(width, containerSize.width)}
-              height={Math.max(height, containerSize.height)}
+              width={width}
+              height={height}
               shotCoordinates={shotCoordinates}
               goalCoordinates={goalCoordinates}
               activeEvents={activeEvents}
               playerNumbers={playerNumbers}
               homeColor={homeColor}
               awayColor={awayColor}
+              eventColors={rinkProps.eventColors}
               {...rinkProps}
             />
           </div>

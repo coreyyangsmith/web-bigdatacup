@@ -36,6 +36,7 @@ interface HockeyRinkProps {
     possessionChain: boolean
     penaltyLocation: boolean
   }
+  eventColors?: Record<string, string>
   shotCoordinates?: ShotCoordinate[]
   goalCoordinates?: ShotCoordinate[]
   activeEvents?: GameEvent[]
@@ -69,6 +70,7 @@ export function HockeyRink({
   playerNumbers = {},
   homeColor,
   awayColor,
+  eventColors = {},
 }: HockeyRinkProps) {
   // Config via env
   const RADIUS = Number(import.meta.env.VITE_PLAYER_NODE_RADIUS ?? 12)
@@ -78,7 +80,8 @@ export function HockeyRink({
   const FILL_AWAY = awayColor ?? (import.meta.env.VITE_PLAYER_NODE_FILL_AWAY ?? "#dc2626")
   // Standard NHL rink dimensions (scaled)
   // Maintain full 200 ft × 85 ft aspect ratio
-  const rinkWidth = width * 0.9
+  // Use 82% of available width to provide comfortable white-space padding
+  const rinkWidth = width * 0.80
   const rinkHeight = rinkWidth * (85 / 200)
 
   // Conversion factors (feet → pixels)
@@ -86,6 +89,9 @@ export function HockeyRink({
   const ftToPxY = rinkHeight / 85
   const SCALE = Math.min(ftToPxX, ftToPxY)
 
+  React.useEffect(() => {
+    console.log(activeEvents)
+  }, [activeEvents])
   // Geometry helpers (in pixels)
   const cornerRadius = 28 * SCALE
   const centerCircleRadius = 15 * SCALE
@@ -102,18 +108,47 @@ export function HockeyRink({
   const centerY = height / 2
 
   // Build player markers from active events
-  interface Marker { name: string | null; x: number; y: number; team: string }
-  const markers: Marker[] = React.useMemo(() => {
-    const res: Marker[] = []
+  interface Marker {
+    name: string | null
+    x: number
+    y: number
+    team: string
+    event: GameEvent
+  }
+  const markersByPosition = React.useMemo(() => {
+    const allMarkers: Marker[] = []
     activeEvents.forEach((ev) => {
       if (ev.x_coordinate != null && ev.y_coordinate != null) {
-        res.push({ name: ev.player ?? null, x: ev.x_coordinate, y: ev.y_coordinate, team: ev.team })
+        allMarkers.push({ name: ev.player ?? null, x: ev.x_coordinate, y: ev.y_coordinate, team: ev.team, event: ev })
       }
       if (ev.x_coordinate_2 != null && ev.y_coordinate_2 != null && ev.player_2) {
-        res.push({ name: ev.player_2, x: ev.x_coordinate_2, y: ev.y_coordinate_2, team: ev.team })
+        allMarkers.push({ name: ev.player_2, x: ev.x_coordinate_2, y: ev.y_coordinate_2, team: ev.team, event: ev })
       }
     })
-    return res
+
+    return allMarkers.reduce(
+      (acc, marker) => {
+        const key = `${marker.x.toFixed(2)},${marker.y.toFixed(2)}`
+        if (!acc[key]) {
+          acc[key] = []
+        }
+        acc[key].push(marker)
+        return acc
+      },
+      {} as Record<string, Marker[]>,
+    )
+  }, [activeEvents])
+
+  // Derive pass arrows (successful / unsuccessful)
+  const passArrows = React.useMemo(() => {
+    return activeEvents.filter(
+      (ev) =>
+        ev.x_coordinate != null &&
+        ev.y_coordinate != null &&
+        ev.x_coordinate_2 != null &&
+        ev.y_coordinate_2 != null &&
+        (ev.event?.toLowerCase() === "play" || ev.event?.toLowerCase() === "incomplete play")
+    )
   }, [activeEvents])
 
   // Helper functions to map rink coordinates from dataset (0-200 x, 0-85 y)
@@ -124,13 +159,19 @@ export function HockeyRink({
     <TooltipProvider>
       <div className="relative">
         {/* Team Names */}
-        <div className="absolute bottom-2 left-4 z-10">
-          <div className="bg-blue-600 text-white px-3 py-1 rounded-md text-sm font-medium">
+        <div className="absolute bottom-2 left-4 z-10 border border-border rounded-lg bg-white">
+          <div
+            className="text-white px-4 py-1 rounded-md text-sm font-medium truncate max-w-[200px] text-center"
+            style={{ backgroundColor: FILL_HOME }}
+          >
             {selectedGame?.homeTeam || "Home Team"}
           </div>
         </div>
-        <div className="absolute bottom-2 right-4 z-10">
-          <div className="bg-red-600 text-white px-3 py-1 rounded-md text-sm font-medium">
+        <div className="absolute bottom-2 right-4 z-10 border border-border rounded-lg bg-white">
+          <div
+            className="text-white px-4 py-1 rounded-md text-sm font-medium truncate max-w-[200px] text-right"
+            style={{ backgroundColor: FILL_AWAY }}
+          >
             {selectedGame?.awayTeam || "Away Team"}
           </div>
         </div>
@@ -439,24 +480,27 @@ export function HockeyRink({
           )}
 
           {/* Players Markers based on active events */}
-          {markers.map((m, idx) => {
-            const jersey = playerNumbers[m.name?.toLowerCase() ?? ""] ?? playerNumbers[m.name ?? ""] ?? ""
+          {Object.values(markersByPosition).map((markers, idx) => {
+            if (markers.length === 0) return null
+            const firstMarker = markers[0]
+            const jersey = playerNumbers[firstMarker.name?.toLowerCase() ?? ""] ?? playerNumbers[firstMarker.name ?? ""] ?? ""
+
             return (
               <Tooltip key={idx}>
                 <TooltipTrigger asChild>
                   <g>
                     <circle
-                      cx={mapX(m.x)}
-                      cy={mapY(m.y)}
+                      cx={mapX(firstMarker.x)}
+                      cy={mapY(firstMarker.y)}
                       r={RADIUS}
-                      fill={m.team === selectedGame?.homeTeam ? FILL_HOME : FILL_AWAY}
+                      fill={firstMarker.team === selectedGame?.homeTeam ? FILL_HOME : FILL_AWAY}
                       stroke={STROKE}
                       strokeWidth={STROKE_W}
                     />
                     {showNumbers && jersey && (
                       <text
-                        x={mapX(m.x)}
-                        y={mapY(m.y) + RADIUS / 3}
+                        x={mapX(firstMarker.x)}
+                        y={mapY(firstMarker.y) + RADIUS / 3}
                         textAnchor="middle"
                         fill="white"
                         fontSize={RADIUS}
@@ -468,7 +512,36 @@ export function HockeyRink({
                     )}
                   </g>
                 </TooltipTrigger>
-                <TooltipContent>{m.name ?? "Unknown"}</TooltipContent>
+                <TooltipContent>
+                  <div className="space-y-4 min-w-[220px] bg-zinc-800 p-2 rounded-md">
+                    {Array.from(new Set(markers.map((m) => m.name ?? "Unknown"))).map((playerName, idx2) => {
+                      const playerEvents = activeEvents.filter(
+                        (ev) =>
+                          ev.player?.toLowerCase() === playerName.toLowerCase() ||
+                          ev.player_2?.toLowerCase() === playerName.toLowerCase(),
+                      )
+
+                      return (
+                        <div key={idx2}>
+                          <p className="font-bold text-white mb-1">{playerName}</p>
+                          <ul className="text-xs text-white/90 list-disc list-inside space-y-0.5">
+                            {playerEvents.map((ev, eidx) => {
+                              const det = [ev.detail_1, ev.detail_2, ev.detail_3, ev.detail_4]
+                                .filter(Boolean)
+                                .join(", ")
+                              return (
+                                <li key={eidx} className="capitalize">
+                                  {ev.event}
+                                  {det && <span className="opacity-80"> – {det}</span>}
+                                </li>
+                              )
+                            })}
+                          </ul>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </TooltipContent>
               </Tooltip>
             )
           })}
@@ -638,6 +711,45 @@ export function HockeyRink({
                 {goalCoordinates.map((c, idx) => (
                   <circle key={idx} cx={mapX(c.x)} cy={mapY(c.y)} r={18} fill="url(#goalGradient)" />
                 ))}
+              </g>
+            )}
+
+            {/* Successful / Incomplete Plays (dynamic arrows) */}
+            {passArrows.length > 0 && (
+              <g>
+                {passArrows.map((ev, idx) => {
+                  const x1 = mapX(ev.x_coordinate as number)
+                  const y1 = mapY(ev.y_coordinate as number)
+                  const x2 = mapX(ev.x_coordinate_2 as number)
+                  const y2 = mapY(ev.y_coordinate_2 as number)
+                  const color = eventColors[ev.event?.toLowerCase() ?? ""] ?? (ev.event?.toLowerCase() === "play" ? "#10b981" : "#ef4444")
+
+                  // Arrow head calculation
+                  const dx = x2 - x1
+                  const dy = y2 - y1
+                  const angle = Math.atan2(dy, dx)
+                  const size = 6
+                  const arrowP1 = { x: x2, y: y2 }
+                  const arrowP2 = {
+                    x: x2 - size * Math.cos(angle - Math.PI / 6),
+                    y: y2 - size * Math.sin(angle - Math.PI / 6),
+                  }
+                  const arrowP3 = {
+                    x: x2 - size * Math.cos(angle + Math.PI / 6),
+                    y: y2 - size * Math.sin(angle + Math.PI / 6),
+                  }
+
+                  const shouldRender = ev.event?.toLowerCase() === "play" || ev.event?.toLowerCase() === "incomplete play"
+
+                  if (!shouldRender) return null
+
+                  return (
+                    <g key={idx} stroke={color} fill={color} strokeWidth={2} opacity={0.9}>
+                      <line x1={x1} y1={y1} x2={x2} y2={y2} />
+                      <polygon points={`${arrowP1.x},${arrowP1.y} ${arrowP2.x},${arrowP2.y} ${arrowP3.x},${arrowP3.y}`} />
+                    </g>
+                  )
+                })}
               </g>
             )}
           </g>
