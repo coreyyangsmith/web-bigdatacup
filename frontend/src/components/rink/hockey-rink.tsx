@@ -10,6 +10,11 @@ interface Player {
   y: number
 }
 
+interface ShotCoordinate {
+  x: number
+  y: number
+}
+
 interface HockeyRinkProps {
   width?: number
   height?: number
@@ -29,6 +34,7 @@ interface HockeyRinkProps {
     possessionChain: boolean
     penaltyLocation: boolean
   }
+  shotCoordinates?: ShotCoordinate[]
 }
 
 export function HockeyRink({
@@ -50,6 +56,7 @@ export function HockeyRink({
     possessionChain: false,
     penaltyLocation: false,
   },
+  shotCoordinates = [],
 }: HockeyRinkProps) {
   // Standard NHL rink dimensions (scaled)
   const rinkWidth = width * 0.9
@@ -116,6 +123,10 @@ export function HockeyRink({
     },
   ]
 
+  // Helper functions to map rink coordinates ([-100,100] x, [-42,42] y) to SVG space
+  const mapX = (x: number) => centerX + (x / 100) * (rinkWidth / 2)
+  const mapY = (y: number) => centerY - (y / 42) * (rinkHeight / 2)
+
   return (
     <TooltipProvider>
       <div className="relative">
@@ -137,6 +148,12 @@ export function HockeyRink({
           viewBox={`0 0 ${width} ${height}`}
           className="border border-border rounded-lg bg-white"
         >
+          <defs>
+            <radialGradient id="shotGradient" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stopColor="#f97316" stopOpacity="0.8" />
+              <stop offset="100%" stopColor="#f97316" stopOpacity="0" />
+            </radialGradient>
+          </defs>
           {/* Ice surface */}
           <rect
             x={(width - rinkWidth) / 2}
@@ -296,13 +313,18 @@ export function HockeyRink({
 
           {/* Visualization Overlays */}
           <g opacity={opacity / 100}>
-            {/* Shot Density Heat Map */}
-            {visualizations.shotDensity && (
+            {/* Shot Density Heat Map (data-driven) */}
+            {visualizations.shotDensity && shotCoordinates.length > 0 && (
               <g>
-                <circle cx={centerX - 120} cy={centerY - 20} r="35" fill="#fbbf24" opacity="0.6" />
-                <circle cx={centerX + 130} cy={centerY + 15} r="28" fill="#f59e0b" opacity="0.6" />
-                <circle cx={centerX - 50} cy={centerY + 50} r="22" fill="#d97706" opacity="0.6" />
-                <circle cx={centerX + 80} cy={centerY - 35} r="18" fill="#92400e" opacity="0.6" />
+                {shotCoordinates.map((c, idx) => (
+                  <circle
+                    key={idx}
+                    cx={mapX(c.x)}
+                    cy={mapY(c.y)}
+                    r={20}
+                    fill="url(#shotGradient)"
+                  />
+                ))}
               </g>
             )}
 

@@ -5,57 +5,78 @@ import { Slider } from "@/components/ui/slider"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 
-interface GameEvent {
-  id: string
-  time: number // in seconds
-  period: number
-  type: "goal" | "shot" | "hit" | "penalty" | "faceoff"
-  description: string
-  team: "home" | "away"
-  player?: string
+import type { Event as GameEventApi } from "@/api/games"
+
+// Helper: parse clock string (e.g. "19:43") to seconds remaining in period
+const clockToSecondsRemaining = (clock: string): number => {
+  const [minStr, secStr] = clock.split(":")
+  const minutes = parseInt(minStr, 10)
+  const seconds = parseInt(secStr, 10)
+  return minutes * 60 + seconds
 }
 
-const gameEvents: GameEvent[] = [
-  { id: "1", time: 120, period: 1, type: "goal", description: "Matthews scores", team: "home", player: "A. Matthews" },
-  {
-    id: "2",
-    time: 340,
-    period: 1,
-    type: "penalty",
-    description: "Tripping - 2 min",
-    team: "away",
-    player: "B. Marchand",
-  },
-  { id: "3", time: 480, period: 1, type: "goal", description: "Pastrnak scores", team: "away", player: "D. Pastrnak" },
-  { id: "4", time: 720, period: 2, type: "shot", description: "Shot on goal", team: "home", player: "M. Marner" },
-  { id: "5", time: 890, period: 2, type: "goal", description: "Marner scores", team: "home", player: "M. Marner" },
-  { id: "6", time: 1200, period: 2, type: "hit", description: "Big hit", team: "away", player: "C. McAvoy" },
-  { id: "7", time: 1450, period: 3, type: "goal", description: "Nylander scores", team: "home", player: "W. Nylander" },
-  {
-    id: "8",
-    time: 1680,
-    period: 3,
-    type: "penalty",
-    description: "High sticking - 2 min",
-    team: "home",
-    player: "J. Tavares",
-  },
-]
+interface TimelineEvent {
+  id: number
+  time: number // seconds from game start
+  period: number
+  type: string // raw lowercase event name
+  description: string
+  player?: string | null
+  team: string
+}
 
 interface TimelineScrubberProps {
+  events: GameEventApi[] | null
+  selectedPlayer: string
+  eventTypeColors: Record<string, string>
   onTimeChange: (time: number) => void
 }
 
-export function TimelineScrubber({ onTimeChange }: TimelineScrubberProps) {
+export function TimelineScrubber({ events, selectedPlayer, eventTypeColors, onTimeChange }: TimelineScrubberProps) {
+  // Build timeline events from API data
+  const timelineEvents: TimelineEvent[] = React.useMemo(() => {
+    if (!events) return []
+
+    const PERIOD_SECONDS = 20 * 60 // 20 min periods
+
+    return events
+      .filter((e) => !!e.clock && !!e.period && !!e.event)
+      .map<TimelineEvent>((e) => {
+        const secRemaining = clockToSecondsRemaining(e.clock)
+        const elapsedInPeriod = PERIOD_SECONDS - secRemaining
+        const absoluteTime = (e.period - 1) * PERIOD_SECONDS + elapsedInPeriod
+
+        return {
+          id: e.id,
+          time: absoluteTime,
+          period: e.period,
+          type: (e.event as string).toLowerCase(),
+          description: e.event ?? "",
+          player: e.player,
+          team: e.team,
+        }
+      })
+  }, [events])
+
+  // Apply player filter if not 'all'
+  const filteredEvents = React.useMemo(() => {
+    if (selectedPlayer === "all") return timelineEvents
+    return timelineEvents.filter((ev) => (ev.player ?? "").toLowerCase() === selectedPlayer.toLowerCase())
+  }, [timelineEvents, selectedPlayer])
+
+  const maxTime = React.useMemo(() => {
+    if (filteredEvents.length === 0) return 60
+    return Math.max(...filteredEvents.map((ev) => ev.time))
+  }, [filteredEvents])
+
   const [currentTime, setCurrentTime] = React.useState([0])
   const [isPlaying, setIsPlaying] = React.useState(false)
-  const [selectedEvent, setSelectedEvent] = React.useState<GameEvent | null>(null)
-
-  const maxTime = 1800 // 30 minutes (3 periods of 10 minutes each for demo)
+  const [selectedEvent, setSelectedEvent] = React.useState<TimelineEvent | null>(null)
 
   const formatTime = (seconds: number) => {
-    const period = Math.floor(seconds / 600) + 1
-    const timeInPeriod = seconds % 600
+    const PERIOD_SECONDS = 20 * 60
+    const period = Math.floor(seconds / PERIOD_SECONDS) + 1
+    const timeInPeriod = seconds % PERIOD_SECONDS
     const minutes = Math.floor(timeInPeriod / 60)
     const secs = Math.floor(timeInPeriod % 60)
     return `P${period} ${minutes.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`
@@ -65,17 +86,18 @@ export function TimelineScrubber({ onTimeChange }: TimelineScrubberProps) {
     setCurrentTime(value)
     onTimeChange(value[0])
 
-    // Check if we're near an event
-    const nearbyEvent = gameEvents.find((event) => Math.abs(event.time - value[0]) < 10)
+    // Find nearest event within 3s window
+    const nearbyEvent = filteredEvents.find((event) => Math.abs(event.time - value[0]) < 3)
     setSelectedEvent(nearbyEvent || null)
   }
 
-  const jumpToEvent = (event: GameEvent) => {
+  const jumpToEvent = (event: TimelineEvent) => {
     setCurrentTime([event.time])
     onTimeChange(event.time)
     setSelectedEvent(event)
   }
 
+  // Playback effect
   React.useEffect(() => {
     let interval: NodeJS.Timeout
     if (isPlaying) {
@@ -88,31 +110,25 @@ export function TimelineScrubber({ onTimeChange }: TimelineScrubberProps) {
           }
           return [newTime]
         })
-      }, 100)
+      }, 500) // 0.5s per game second
     }
     return () => clearInterval(interval)
   }, [isPlaying, maxTime, onTimeChange])
 
   const getPreviousEvent = () => {
-    return gameEvents.filter((event) => event.time < currentTime[0]).sort((a, b) => b.time - a.time)[0]
+    return filteredEvents.filter((event) => event.time < currentTime[0]).sort((a, b) => b.time - a.time)[0]
   }
-
   const getNextEvent = () => {
-    return gameEvents.filter((event) => event.time > currentTime[0]).sort((a, b) => a.time - b.time)[0]
+    return filteredEvents.filter((event) => event.time > currentTime[0]).sort((a, b) => a.time - b.time)[0]
   }
 
   const jumpToPreviousEvent = () => {
     const prevEvent = getPreviousEvent()
-    if (prevEvent) {
-      jumpToEvent(prevEvent)
-    }
+    if (prevEvent) jumpToEvent(prevEvent)
   }
-
   const jumpToNextEvent = () => {
     const nextEvent = getNextEvent()
-    if (nextEvent) {
-      jumpToEvent(nextEvent)
-    }
+    if (nextEvent) jumpToEvent(nextEvent)
   }
 
   return (
@@ -124,7 +140,7 @@ export function TimelineScrubber({ onTimeChange }: TimelineScrubberProps) {
             <Button variant="outline" size="sm" onClick={() => handleTimeChange([0])}>
               <SkipBack className="h-4 w-4" />
             </Button>
-            <Button variant="outline" size="sm" onClick={() => setIsPlaying(!isPlaying)}>
+            <Button variant="outline" size="sm" onClick={() => setIsPlaying(!isPlaying)} disabled={filteredEvents.length === 0}>
               {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
             </Button>
             <Button variant="outline" size="sm" onClick={() => handleTimeChange([maxTime])}>
@@ -153,7 +169,7 @@ export function TimelineScrubber({ onTimeChange }: TimelineScrubberProps) {
 
             {/* Event Markers */}
             <div className="absolute top-0 left-0 w-full h-6 pointer-events-none">
-              {gameEvents.map((event) => (
+              {filteredEvents.map((event) => (
                 <div
                   key={event.id}
                   className="absolute top-0 w-2 h-6 cursor-pointer pointer-events-auto"
@@ -161,17 +177,8 @@ export function TimelineScrubber({ onTimeChange }: TimelineScrubberProps) {
                   onClick={() => jumpToEvent(event)}
                 >
                   <div
-                    className={`w-2 h-6 rounded-sm ${
-                      event.type === "goal"
-                        ? "bg-green-500"
-                        : event.type === "penalty"
-                          ? "bg-red-500"
-                          : event.type === "shot"
-                            ? "bg-blue-500"
-                            : event.type === "hit"
-                              ? "bg-orange-500"
-                              : "bg-gray-500"
-                    }`}
+                    className="w-2 h-6 rounded-sm"
+                    style={{ backgroundColor: eventTypeColors[event.type] ?? "#6b7280" }}
                   />
                 </div>
               ))}
@@ -182,13 +189,10 @@ export function TimelineScrubber({ onTimeChange }: TimelineScrubberProps) {
           {selectedEvent && (
             <div className="flex items-center gap-2 p-2 bg-muted rounded-lg">
               <Badge
-                variant={
-                  selectedEvent.type === "goal"
-                    ? "default"
-                    : selectedEvent.type === "penalty"
-                      ? "destructive"
-                      : "secondary"
-                }
+                style={{
+                  backgroundColor: eventTypeColors[selectedEvent.type] ?? "#64748b",
+                  color: "white",
+                }}
               >
                 {selectedEvent.type.toUpperCase()}
               </Badge>
@@ -199,23 +203,13 @@ export function TimelineScrubber({ onTimeChange }: TimelineScrubberProps) {
           )}
 
           {/* Event Legend */}
-          <div className="flex items-center gap-4 mt-8 text-xs">
-            <div className="flex items-center gap-1">
-              <div className="w-3 h-3 bg-green-500 rounded-sm" />
-              <span>Goals</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <div className="w-3 h-3 bg-red-500 rounded-sm" />
-              <span>Penalties</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <div className="w-3 h-3 bg-blue-500 rounded-sm" />
-              <span>Shots</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <div className="w-3 h-3 bg-orange-500 rounded-sm" />
-              <span>Hits</span>
-            </div>
+          <div className="flex flex-wrap items-center gap-3 mt-8 text-xs">
+            {Object.entries(eventTypeColors).map(([etype, color]) => (
+              <div key={etype} className="flex items-center gap-1">
+                <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: color }} />
+                <span>{etype}</span>
+              </div>
+            ))}
           </div>
         </div>
       </CardContent>

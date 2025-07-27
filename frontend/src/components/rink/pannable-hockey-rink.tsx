@@ -20,10 +20,11 @@ interface PannableHockeyRinkProps {
     possessionChain: boolean
     penaltyLocation: boolean
   }
+  shotCoordinates?: { x: number; y: number }[]
 }
 
 export const PannableHockeyRink = React.forwardRef<() => void, PannableHockeyRinkProps>(
-  ({ width = 900, height = 450, ...rinkProps }, ref) => {
+  ({ width = 900, height = 450, shotCoordinates = [], ...rinkProps }, ref) => {
     const containerRef = React.useRef<HTMLDivElement>(null)
     const [containerSize, setContainerSize] = React.useState<{ width: number; height: number }>({ width, height })
     const [transform, setTransform] = React.useState({ x: 0, y: 0, scale: 1 })
@@ -166,6 +167,7 @@ export const PannableHockeyRink = React.forwardRef<() => void, PannableHockeyRin
             <HockeyRink
               width={Math.max(width, containerSize.width)}
               height={Math.max(height, containerSize.height)}
+              shotCoordinates={shotCoordinates}
               {...rinkProps}
             />
           </div>

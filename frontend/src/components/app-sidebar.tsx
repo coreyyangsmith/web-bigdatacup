@@ -70,6 +70,9 @@ interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
   onShowZonesChange: (v: boolean) => void
   showNumbers: boolean
   onShowNumbersChange: (v: boolean) => void
+  players: string[]
+  selectedPlayer: string
+  onSelectedPlayerChange: (player: string) => void
 }
 
 export function AppSidebar({
@@ -84,6 +87,9 @@ export function AppSidebar({
   onShowZonesChange,
   showNumbers,
   onShowNumbersChange,
+  players,
+  selectedPlayer,
+  onSelectedPlayerChange,
   // Settings callbacks reserved
   ...props
 }: AppSidebarProps) {
@@ -128,7 +134,7 @@ export function AppSidebar({
         {viewMode === "rink" && (
           <div className="mt-4">
             <Label className="text-sm font-medium">Player Analysis</Label>
-            <Select defaultValue="all">
+            <Select value={selectedPlayer} onValueChange={onSelectedPlayerChange}>
               <SelectTrigger className="w-full mt-1">
                 <SelectValue placeholder="Select player" />
               </SelectTrigger>
@@ -136,19 +142,12 @@ export function AppSidebar({
                 <SelectItem value="all">All Players</SelectItem>
                 <SelectSeparator />
                 <SelectGroup>
-                  <SelectLabel>Home Team - {selectedGame.homeTeam}</SelectLabel>
-                  <SelectItem value="matthews">A. Matthews (#34)</SelectItem>
-                  <SelectItem value="marner">M. Marner (#16)</SelectItem>
-                  <SelectItem value="nylander">W. Nylander (#88)</SelectItem>
-                  <SelectItem value="tavares">J. Tavares (#91)</SelectItem>
-                </SelectGroup>
-                <SelectSeparator />
-                <SelectGroup>
-                  <SelectLabel>Away Team - {selectedGame.awayTeam}</SelectLabel>
-                  <SelectItem value="pastrnak">D. Pastrnak (#88)</SelectItem>
-                  <SelectItem value="marchand">B. Marchand (#63)</SelectItem>
-                  <SelectItem value="mcavoy">C. McAvoy (#73)</SelectItem>
-                  <SelectItem value="bergeron">P. Bergeron (#37)</SelectItem>
+                  <SelectLabel>Players</SelectLabel>
+                  {players.map((p) => (
+                    <SelectItem key={p} value={p}>
+                      {p}
+                    </SelectItem>
+                  ))}
                 </SelectGroup>
               </SelectContent>
             </Select>

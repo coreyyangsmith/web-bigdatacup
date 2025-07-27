@@ -6,8 +6,8 @@ import { AppSidebar } from "../components/app-sidebar"
 import { PannableHockeyRink } from "../components/rink/pannable-hockey-rink"
 import { GameTable } from "../components/game-table"
 
-import { fetchGameEvents } from "@/api/games"
-import type { Event as GameEvent } from "@/api/games"
+import { fetchGameEvents, fetchGameShotDensity, fetchEventTypes } from "@/api/games"
+import type { Event as GameEvent, ShotCoordinate } from "@/api/games"
 import { TimelineScrubber } from "../components/timeline-scrubber"
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
 import {
@@ -22,6 +22,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { ArrowLeft, Download, FullscreenIcon as FullScreen, ZoomIn, ZoomOut } from "lucide-react"
 import { toast } from "react-toastify"
+import { getEventTypeColorMap } from "@/themes/event-colors"
 
 export default function HockeyDashboard() {
   const [selectedGame, setSelectedGame] = React.useState<any>(null)
@@ -34,6 +35,10 @@ export default function HockeyDashboard() {
   const [events, setEvents] = React.useState<GameEvent[] | null>(null)
   const [loadingEvents, setLoadingEvents] = React.useState(false)
   const [eventsError, setEventsError] = React.useState<string | null>(null)
+  const [shotCoords, setShotCoords] = React.useState<ShotCoordinate[] | null>(null)
+  const [selectedPlayer, setSelectedPlayer] = React.useState<string>("all")
+  const [players, setPlayers] = React.useState<string[]>([])
+  const [eventTypeColors, setEventTypeColors] = React.useState<Record<string, string>>({})
   const rinkRef = React.useRef<() => void>(null)
 
   const handleExportData = () => {
@@ -101,8 +106,20 @@ export default function HockeyDashboard() {
       setLoadingEvents(true)
       setEventsError(null)
       try {
-        const evs = await fetchGameEvents(selectedGame.id)
+        const [evs, shots, eventTypes] = await Promise.all([
+          fetchGameEvents(selectedGame.id),
+          fetchGameShotDensity(selectedGame.id),
+          fetchEventTypes(),
+        ])
         setEvents(evs)
+        setShotCoords(shots)
+        // Build unique player list
+        const unique = Array.from(new Set(evs.map((e) => e.player).filter(Boolean))) as string[]
+        unique.sort((a, b) => a.localeCompare(b))
+        setPlayers(unique)
+
+        // Build color mapping
+        setEventTypeColors(getEventTypeColorMap(eventTypes))
       } catch (err: any) {
         setEventsError(err?.message ?? "Failed to load events")
       } finally {
@@ -131,6 +148,9 @@ export default function HockeyDashboard() {
         onShowZonesChange={setShowZones}
         showNumbers={showNumbers}
         onShowNumbersChange={setShowNumbers}
+        players={players}
+        selectedPlayer={selectedPlayer}
+        onSelectedPlayerChange={setSelectedPlayer}
       />
       <SidebarInset>
         <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
@@ -221,6 +241,17 @@ export default function HockeyDashboard() {
                       currentTime={currentTime}
                       opacity={opacity}
                       selectedGame={selectedGame}
+                      shotCoordinates={shotCoords ?? []}
+                      visualizations={{
+                        shotDensity: true,
+                        goalDensity: true,
+                        expectedGoalDensity: false,
+                        successfulPass: true,
+                        unsuccessfulPass: false,
+                        entryRoutes: false,
+                        possessionChain: false,
+                        penaltyLocation: false,
+                      }}
                       ref={rinkRef}
                     />
                   </div>
@@ -228,7 +259,12 @@ export default function HockeyDashboard() {
               </Card>
 
               <div className="flex-none">
-                <TimelineScrubber onTimeChange={setCurrentTime} />
+                <TimelineScrubber
+                  events={events}
+                  selectedPlayer={selectedPlayer}
+                  eventTypeColors={eventTypeColors}
+                  onTimeChange={setCurrentTime}
+                />
               </div>
             </>
           )}
