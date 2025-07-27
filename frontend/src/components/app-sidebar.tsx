@@ -1,5 +1,5 @@
 import type * as React from "react"
-import { BarChart3, Eye, Layers, Target, Users, Table, RatIcon as Rink, Settings } from "lucide-react"
+import { BarChart3, Eye, Layers, Target, Users, Table, RatIcon as Rink, Settings, Goal } from "lucide-react"
 
 import {
   Sidebar,
@@ -12,6 +12,8 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarSeparator,
+  SidebarMenuSub,
+  SidebarMenuSubItem,
 } from "@/components/ui/sidebar"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
@@ -140,7 +142,7 @@ export function AppSidebar({
             className={cn("flex-1 h-8", viewMode === "rink" && "shadow-sm")}
             onClick={() => onViewModeChange("rink")}
           >
-            <Rink className="h-4 w-4 mr-1" />
+            <Goal className="h-4 w-4 mr-1" />
             Rink
           </Button>
           <Button
@@ -156,7 +158,6 @@ export function AppSidebar({
 
         {/* Player Analysis removed from sidebar */}
       </SidebarHeader>
-
       {viewMode === "rink" && (
         <SidebarContent>
           <SidebarGroup>
@@ -172,23 +173,25 @@ export function AppSidebar({
                       <category.icon className="h-4 w-4" />
                       <span>{category.title}</span>
                     </SidebarMenuButton>
-                    <div className="ml-6 mt-2 space-y-2">
+                    <SidebarMenuSub>
                       {category.items.map((item) => (
-                        <div key={item.name} className="flex items-center justify-between">
-                          <Label htmlFor={item.name} className="text-sm font-normal">
-                            {item.name}
-                          </Label>
-                          <Switch
-                            id={item.name}
-                            checked={visualizations[item.name === "Shot Density" ? "shotDensity" : item.name === "Goal Density" ? "goalDensity" : "shotDensity"]}
-                            onCheckedChange={(checked) => {
-                              const key = item.name === "Shot Density" ? "shotDensity" : item.name === "Goal Density" ? "goalDensity" : "shotDensity"
-                              onVisualizationsChange({ ...visualizations, [key]: checked })
-                            }}
-                          />
-                        </div>
+                        <SidebarMenuSubItem key={item.name}>
+                          <div className="flex items-center justify-between w-full min-w-0">
+                            <Label htmlFor={item.name} className="text-sm font-normal truncate flex-1 mr-2">
+                              {item.name}
+                            </Label>
+                            <Switch
+                              id={item.name}
+                              checked={visualizations[item.name === "Shot Density" ? "shotDensity" : item.name === "Goal Density" ? "goalDensity" : "shotDensity"]}
+                              onCheckedChange={(checked) => {
+                                const key = item.name === "Shot Density" ? "shotDensity" : item.name === "Goal Density" ? "goalDensity" : "shotDensity"
+                                onVisualizationsChange({ ...visualizations, [key]: checked })
+                              }}
+                            />
+                          </div>
+                        </SidebarMenuSubItem>
                       ))}
-                    </div>
+                    </SidebarMenuSub>
                   </SidebarMenuItem>
                 ))}
               </SidebarMenu>
@@ -217,22 +220,22 @@ export function AppSidebar({
                   <div className="text-xs text-muted-foreground text-right">{opacity}%</div>
                 </div>
 
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="show-grid" className="text-sm">
+                <div className="flex items-center justify-between min-w-0">
+                  <Label htmlFor="show-grid" className="text-sm truncate flex-1 mr-2">
                     Show Grid
                   </Label>
                   <Switch id="show-grid" checked={showGrid} onCheckedChange={onShowGridChange} />
                 </div>
 
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="show-zones" className="text-sm">
+                <div className="flex items-center justify-between min-w-0">
+                  <Label htmlFor="show-zones" className="text-sm truncate flex-1 mr-2">
                     Zone Lines
                   </Label>
                   <Switch id="show-zones" checked={showZones} onCheckedChange={onShowZonesChange} />
                 </div>
 
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="show-numbers" className="text-sm">
+                <div className="flex items-center justify-between min-w-0">
+                  <Label htmlFor="show-numbers" className="text-sm truncate flex-1 mr-2">
                     Player Numbers
                   </Label>
                   <Switch id="show-numbers" checked={showNumbers} onCheckedChange={onShowNumbersChange} />
@@ -250,22 +253,22 @@ export function AppSidebar({
             </SidebarGroupLabel>
             <SidebarGroupContent>
               <div className="space-y-4 px-2">
-                <div>
-                  <Label className="text-sm font-medium">Home Team Color</Label>
+                <div className="min-w-0">
+                  <Label className="text-sm font-medium block truncate">Home Team Color</Label>
                   <input
                     type="color"
                     value={homeColor}
                     onChange={(e) => onHomeColorChange(e.target.value)}
-                    className="w-full h-8 mt-1 rounded"
+                    className="w-full h-8 mt-1 rounded min-w-0"
                   />
                 </div>
-                <div>
-                  <Label className="text-sm font-medium">Away Team Color</Label>
+                <div className="min-w-0">
+                  <Label className="text-sm font-medium block truncate">Away Team Color</Label>
                   <input
                     type="color"
                     value={awayColor}
                     onChange={(e) => onAwayColorChange(e.target.value)}
-                    className="w-full h-8 mt-1 rounded"
+                    className="w-full h-8 mt-1 rounded min-w-0"
                   />
                 </div>
               </div>

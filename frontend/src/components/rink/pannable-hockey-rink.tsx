@@ -165,13 +165,15 @@ export const PannableHockeyRink = React.forwardRef<() => void, PannableHockeyRin
         >
           <div
             style={{
+              width: `${width}px`,
+              height: `${height}px`,
               transform: `translate(${transform.x}px, ${transform.y}px) scale(${transform.scale})`,
               transformOrigin: "0 0",
               transition: isDragging ? "none" : "transform 0.1s ease-out",
             }}
           >
             {/*
-             Preserve the rink’s intrinsic dimensions so it never resizes with the
+             Preserve the rink's intrinsic dimensions so it never resizes with the
              parent container.  Users can still pan/zoom to explore the full
              surface without the SVG itself scaling up or down.
             */}

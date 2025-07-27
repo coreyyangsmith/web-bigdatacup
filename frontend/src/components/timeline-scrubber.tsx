@@ -4,6 +4,16 @@ import { Button } from "@/components/ui/button"
 import { Slider } from "@/components/ui/slider"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectSeparator,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 import type { Event as GameEventApi } from "@/api/games"
 
@@ -26,6 +36,8 @@ interface TimelineEvent {
   team: string
   home_team_skaters: number
   away_team_skaters: number
+  home_team: string
+  away_team: string
   detail_1?: string | null
   detail_2?: string | null
   detail_3?: string | null
@@ -65,6 +77,8 @@ export function TimelineScrubber({ events, selectedPlayer, selectedTeam, eventTy
           team: e.team,
           home_team_skaters: e.home_team_skaters,
           away_team_skaters: e.away_team_skaters,
+          home_team: e.home_team,
+          away_team: e.away_team,
           detail_1: e.detail_1,
           detail_2: e.detail_2,
           detail_3: e.detail_3,
@@ -73,16 +87,46 @@ export function TimelineScrubber({ events, selectedPlayer, selectedTeam, eventTy
       })
   }, [events])
 
+  // Derive home & away team names from first event (if available)
+  const homeTeamName = timelineEvents[0]?.team ? timelineEvents[0].home_team : timelineEvents[0]?.home_team || "Home"
+  const awayTeamName = timelineEvents[0]?.away_team || "Away"
+
+  const teamAbbr = React.useCallback((teamName: string | undefined | null): string => {
+    if (!teamName) return "";
+    const seg = teamName.split("-").pop()?.trim() ?? teamName;
+    const letters = seg.replace(/[^A-Za-z]/g, "").toUpperCase();
+    if (letters.length >= 3) return letters.slice(0, 3);
+    return (letters + "XXX").slice(0, 3);
+  }, []);
+
+  // ---------------- Event Type Filter ----------------
+  const EVENT_TYPE_GROUPS: { label: string; types: string[] }[] = [
+    { label: "Scoring Events", types: ["goal", "shot"] },
+    { label: "Possession Events", types: ["puck recovery", "takeaway", "zone entry"] },
+    { label: "Face-off Events", types: ["faceoff win"] },
+    { label: "Penalties", types: ["penalty taken"] },
+    { label: "General Play", types: ["play", "incomplete play"] },
+    { label: "Dump Events", types: ["dump in/out"] },
+  ]
+
+  const [selectedEventType, setSelectedEventType] = React.useState<string>("all")
+
   // Apply player filter if not 'all'
   const filteredEvents = React.useMemo(() => {
+    let res = timelineEvents
+
     if (selectedPlayer !== "all") {
-      return timelineEvents.filter((ev) => (ev.player ?? "").toLowerCase() === selectedPlayer.toLowerCase())
+      res = res.filter((ev) => (ev.player ?? "").toLowerCase() === selectedPlayer.toLowerCase())
+    } else if (selectedTeam !== "all") {
+      res = res.filter((ev) => (ev.team ?? "").toLowerCase() === selectedTeam.toLowerCase())
     }
-    if (selectedTeam !== "all") {
-      return timelineEvents.filter((ev) => (ev.team ?? "").toLowerCase() === selectedTeam.toLowerCase())
+
+    if (selectedEventType !== "all") {
+      res = res.filter((ev) => ev.type === selectedEventType)
     }
-    return timelineEvents
-  }, [timelineEvents, selectedPlayer, selectedTeam])
+
+    return res
+  }, [timelineEvents, selectedPlayer, selectedTeam, selectedEventType])
 
   const maxTime = React.useMemo(() => {
     if (filteredEvents.length === 0) return 60
@@ -205,6 +249,39 @@ export function TimelineScrubber({ events, selectedPlayer, selectedTeam, eventTy
           {/* Title */}
           <h3 className="text-lg font-semibold">Game Timeline</h3>
 
+          {/* Event Type Filter */}
+          <div className="flex items-center gap-2">
+            <span className="text-sm">Filter:</span>
+            <Select value={selectedEventType} onValueChange={setSelectedEventType}>
+              <SelectTrigger size="sm" className="min-w-[160px]">
+                <SelectValue placeholder="All events" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Events</SelectItem>
+                <SelectSeparator />
+                {EVENT_TYPE_GROUPS.map((grp: { label: string; types: string[] }) => {
+                  const swatchColor = eventTypeColors[grp.types[0]] ?? "#6b7280"
+                  return (
+                    <SelectGroup key={grp.label}>
+                      <SelectLabel className="flex items-center gap-2">
+                        <span
+                          className="inline-block w-2 h-2 rounded-full"
+                          style={{ backgroundColor: swatchColor }}
+                        />
+                        {grp.label}
+                      </SelectLabel>
+                      {grp.types.map((t: string) => (
+                        <SelectItem key={t} value={t} className="pl-5">
+                          {t.charAt(0).toUpperCase() + t.slice(1)}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  )
+                })}
+              </SelectContent>
+            </Select>
+          </div>
+
           {/* Timeline Controls */}
           <div className="flex items-center gap-4">
             <Button variant="outline" size="sm" onClick={() => handleTimeChange([0])}>
@@ -226,8 +303,19 @@ export function TimelineScrubber({ events, selectedPlayer, selectedTeam, eventTy
             <div className="text-sm font-mono">{formatTime(currentTime[0])}</div>
           </div>
 
-          {/* Timeline Slider */}
-          <div className="relative">
+          {/* Timeline Slider with team labels */}
+          <div className="flex items-start">
+            {/* Team abbreviation column */}
+            <div className="flex flex-col pt-2 mr-2 w-8 shrink-0 select-none">
+              <span className="text-[10px] text-muted-foreground text-right">
+                {teamAbbr(awayTeamName)}
+              </span>
+              <span className="text-[10px] text-muted-foreground mt-3 text-right">
+                {teamAbbr(homeTeamName)}
+              </span>
+            </div>
+
+            <div className="relative flex-1">
             {/* Period colored bars */}
             <div className="absolute -top-1 w-full h-1 pointer-events-none z-0">
               {periodSegments.map((seg) => {
@@ -260,7 +348,7 @@ export function TimelineScrubber({ events, selectedPlayer, selectedTeam, eventTy
                 idx > 0 && (
                   <div
                     key={`period-${idx}`}
-                    className="absolute top-0 h-8 border-l border-border text-[10px] text-muted-foreground select-none"
+                    className="absolute top-0 h-12 border-l border-border text-[10px] text-muted-foreground select-none"
                     style={{ left: `${(seg.start / maxTime) * 100}%` }}
                   >
                     <span className="absolute -top-5 -ml-2">{idx + 1 <= 3 ? `P${idx + 1}` : "OT"}</span>
@@ -270,22 +358,36 @@ export function TimelineScrubber({ events, selectedPlayer, selectedTeam, eventTy
             </div>
 
 
-            {/* Event Markers */}
-            <div className="absolute top-2 left-0 w-full h-6 pointer-events-none">
-              {filteredEvents.map((event) => (
-                <div
-                  key={event.id}
-                  className="absolute top-0 w-2 h-6 cursor-pointer pointer-events-auto"
-                  style={{ left: `calc(${(event.time / maxTime) * 100}% - 4px)` }}
-                  onClick={() => jumpToEvent(event)}
-                >
+            {/* Event Markers (stacked rows by team) */}
+            <div className="absolute top-2 left-0 w-full h-18 pointer-events-none">
+              {/* Divider between team rows */}
+              <div
+                className="absolute left-0 w-full h-px bg-border"
+                style={{ top: "16px" }}
+              />
+              {filteredEvents.map((event) => {
+                const isHome = event.team?.toLowerCase() === (homeTeamName ?? "").toLowerCase()
+                const rowOffset = isHome ? 18 : 0 // px for row separation
+                return (
                   <div
-                    className="w-2 h-6 rounded-sm"
-                    style={{ backgroundColor: eventTypeColors[event.type] ?? "#6b7280" }}
-                  />
-                </div>
-              ))}
+                    key={event.id}
+                    className="absolute w-2 h-4 cursor-pointer pointer-events-auto"
+                    style={{
+                      left: `calc(${(event.time / maxTime) * 100}% - 4px)`,
+                      top: `${rowOffset}px`,
+                    }}
+                    onClick={() => jumpToEvent(event)}
+                  >
+                    <div
+                      className="w-2 h-4 rounded-sm"
+                      style={{ backgroundColor: eventTypeColors[event.type] ?? "#6b7280" }}
+                    />
+                  </div>
+                )
+              })}
             </div>
+
+            </div> {/* end relative flex-1 */}
           </div>
 
           {/* Event Details */}

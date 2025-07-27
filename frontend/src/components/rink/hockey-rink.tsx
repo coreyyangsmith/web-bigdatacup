@@ -80,8 +80,8 @@ export function HockeyRink({
   const FILL_AWAY = awayColor ?? (import.meta.env.VITE_PLAYER_NODE_FILL_AWAY ?? "#dc2626")
   // Standard NHL rink dimensions (scaled)
   // Maintain full 200 ft × 85 ft aspect ratio
-  // Use 82% of available width to provide comfortable white-space padding
-  const rinkWidth = width * 0.80
+  // Use 80% of available width to provide comfortable white-space padding
+  const rinkWidth = width * 0.75
   const rinkHeight = rinkWidth * (85 / 200)
 
   // Conversion factors (feet → pixels)
@@ -157,19 +157,19 @@ export function HockeyRink({
 
   return (
     <TooltipProvider>
-      <div className="relative">
+      <div className="relative border border-border rounded-lg">
         {/* Team Names */}
-        <div className="absolute bottom-2 left-4 z-10 border border-border rounded-lg bg-white">
+        <div className="absolute bottom-2 left-2 z-10 border border-border rounded-lg bg-white">
           <div
-            className="text-white px-4 py-1 rounded-md text-sm font-medium truncate max-w-[200px] text-center"
+            className="text-white px-4 py-1 rounded-md text-sm font-medium text-center"
             style={{ backgroundColor: FILL_HOME }}
           >
             {selectedGame?.homeTeam || "Home Team"}
           </div>
         </div>
-        <div className="absolute bottom-2 right-4 z-10 border border-border rounded-lg bg-white">
+        <div className="absolute bottom-2 right-2 z-10 border border-border rounded-lg bg-white">
           <div
-            className="text-white px-4 py-1 rounded-md text-sm font-medium truncate max-w-[200px] text-right"
+            className="text-white px-4 py-1 rounded-md text-sm font-medium text-right"
             style={{ backgroundColor: FILL_AWAY }}
           >
             {selectedGame?.awayTeam || "Away Team"}
