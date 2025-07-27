@@ -4,3 +4,4 @@ SQLAlchemy
 pydantic
 python-dotenv 
 pydantic-settings 
+pandas 
