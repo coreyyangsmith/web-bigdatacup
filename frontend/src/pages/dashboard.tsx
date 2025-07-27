@@ -130,7 +130,9 @@ export default function HockeyDashboard() {
           <Breadcrumb>
             <BreadcrumbList>
               <BreadcrumbItem className="hidden md:block">
-                <BreadcrumbLink href="#">Hockey Analytics</BreadcrumbLink>
+                <BreadcrumbLink href="#" onClick={() => setSelectedGame(null)}>
+                  All Games
+                </BreadcrumbLink>
               </BreadcrumbItem>
               <BreadcrumbSeparator className="hidden md:block" />
               <BreadcrumbItem>
