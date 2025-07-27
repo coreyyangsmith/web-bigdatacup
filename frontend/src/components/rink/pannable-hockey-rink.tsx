@@ -13,24 +13,25 @@ interface PannableHockeyRinkProps {
   visualizations?: {
     shotDensity: boolean
     goalDensity: boolean
-    expectedGoalDensity: boolean
     successfulPass: boolean
     unsuccessfulPass: boolean
-    entryRoutes: boolean
-    possessionChain: boolean
+    eventHeatmap: boolean
     penaltyLocation: boolean
   }
   shotCoordinates?: { x: number; y: number }[]
   goalCoordinates?: { x: number; y: number }[]
   activeEvents?: import("@/api/games").Event[]
+  events?: import("@/api/games").Event[]
   playerNumbers?: Record<string, number | null>
   homeColor?: string
   awayColor?: string
   eventColors?: Record<string, string>
+  selectedTeam?: string
+  selectedPlayer?: string
 }
 
 export const PannableHockeyRink = React.forwardRef<() => void, PannableHockeyRinkProps>(
-  ({ width = 1000, height = 500, shotCoordinates = [], goalCoordinates = [], activeEvents = [], playerNumbers = {}, homeColor, awayColor, ...rinkProps }, ref) => {
+  ({ width = 1000, height = 500, shotCoordinates = [], goalCoordinates = [], activeEvents = [], events = [], playerNumbers = {}, homeColor, awayColor, selectedTeam, selectedPlayer, ...rinkProps }, ref) => {
     const containerRef = React.useRef<HTMLDivElement>(null)
     const [containerSize, setContainerSize] = React.useState<{ width: number; height: number }>({ width, height })
     const [transform, setTransform] = React.useState({ x: 0, y: 0, scale: 1 })
@@ -183,10 +184,13 @@ export const PannableHockeyRink = React.forwardRef<() => void, PannableHockeyRin
               shotCoordinates={shotCoordinates}
               goalCoordinates={goalCoordinates}
               activeEvents={activeEvents}
+              events={events}
               playerNumbers={playerNumbers}
               homeColor={homeColor}
               awayColor={awayColor}
               eventColors={rinkProps.eventColors}
+              selectedTeam={selectedTeam}
+              selectedPlayer={selectedPlayer}
               {...rinkProps}
             />
           </div>

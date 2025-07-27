@@ -128,10 +128,9 @@ export default function HockeyDashboard() {
   const [visualizations, setVisualizations] = React.useState({
     shotDensity: true,
     goalDensity: true,
-    expectedGoalDensity: false,
     successfulPass: false,
     unsuccessfulPass: false,
-    entryRoutes: false,
+    eventHeatmap: false,
     possessionChain: false,
     penaltyLocation: false,
   })
@@ -507,7 +506,10 @@ export default function HockeyDashboard() {
                   awayColor={awayColor}
                   visualizations={visualizations}
                   activeEvents={activeEvents}
+                  events={events ?? []}
                   eventColors={eventTypeColors}
+                  selectedTeam={selectedTeam}
+                  selectedPlayer={selectedPlayer}
                   ref={rinkRef}
                 />
               </div>

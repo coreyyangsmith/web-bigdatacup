@@ -1,5 +1,5 @@
 import type * as React from "react"
-import { BarChart3, Eye, Layers, Target, Users, Table, RatIcon as Rink, Settings, Goal } from "lucide-react"
+import { BarChart3, Eye, Layers, Target, Users, Table, RatIcon as Rink, Settings, Goal, type LucideIcon } from "lucide-react"
 
 import {
   Sidebar,
@@ -31,34 +31,37 @@ import {
   SelectLabel,
 } from "@/components/ui/select"
 
+// Map every visualization to a unique key so the switches act independently
 const visualizationOptions = [
   {
     title: "Heat Maps",
     icon: Target,
     items: [
-      { name: "Shot Density", active: false },
-      { name: "Goal Density", active: true },
-      { name: "Expected Goal Density", active: false },
+      { name: "Shot Density", key: "shotDensity" as const },
+      { name: "Goal Density", key: "goalDensity" as const },
     ],
   },
   {
     title: "Player Tracking",
     icon: Users,
     items: [
-      { name: "Successful Pass", active: true },
-      { name: "Unsuccessful Pass", active: false },
-      { name: "Entry Routes", active: false },
+      { name: "Successful Pass", key: "successfulPass" as const },
+      { name: "Unsuccessful Pass", key: "unsuccessfulPass" as const },
     ],
   },
   {
     title: "Game Events",
     icon: BarChart3,
     items: [
-      { name: "Possession Chain", active: false },
-      { name: "Penalty Location", active: false },
+      { name: "Penalty Location", key: "penaltyLocation" as const },
+      { name: "Event Heatmap", key: "eventHeatmap" as const },
     ],
   },
-]
+] satisfies Array<{
+  title: string
+  icon: LucideIcon
+  items: Array<{ name: string; key: keyof AppSidebarProps["visualizations"] }>
+}>
 
 interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
   selectedGame: any
@@ -75,21 +78,17 @@ interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
   visualizations: {
     shotDensity: boolean
     goalDensity: boolean
-    expectedGoalDensity: boolean
     successfulPass: boolean
     unsuccessfulPass: boolean
-    entryRoutes: boolean
-    possessionChain: boolean
+    eventHeatmap: boolean
     penaltyLocation: boolean
   }
   onVisualizationsChange: (v: {
     shotDensity: boolean
     goalDensity: boolean
-    expectedGoalDensity: boolean
     successfulPass: boolean
     unsuccessfulPass: boolean
-    entryRoutes: boolean
-    possessionChain: boolean
+    eventHeatmap: boolean
     penaltyLocation: boolean
   }) => void
   homeColor?: string
@@ -182,10 +181,9 @@ export function AppSidebar({
                             </Label>
                             <Switch
                               id={item.name}
-                              checked={visualizations[item.name === "Shot Density" ? "shotDensity" : item.name === "Goal Density" ? "goalDensity" : "shotDensity"]}
+                              checked={visualizations[item.key]}
                               onCheckedChange={(checked) => {
-                                const key = item.name === "Shot Density" ? "shotDensity" : item.name === "Goal Density" ? "goalDensity" : "shotDensity"
-                                onVisualizationsChange({ ...visualizations, [key]: checked })
+                                onVisualizationsChange({ ...visualizations, [item.key]: checked })
                               }}
                             />
                           </div>

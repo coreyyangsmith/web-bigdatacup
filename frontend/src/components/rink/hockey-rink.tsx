@@ -29,20 +29,21 @@ interface HockeyRinkProps {
   visualizations?: {
     shotDensity: boolean
     goalDensity: boolean
-    expectedGoalDensity: boolean
     successfulPass: boolean
     unsuccessfulPass: boolean
-    entryRoutes: boolean
-    possessionChain: boolean
+    eventHeatmap: boolean
     penaltyLocation: boolean
   }
   eventColors?: Record<string, string>
   shotCoordinates?: ShotCoordinate[]
   goalCoordinates?: ShotCoordinate[]
   activeEvents?: GameEvent[]
+  events?: GameEvent[]
   playerNumbers?: Record<string, number | null>
   homeColor?: string
   awayColor?: string
+  selectedTeam?: string
+  selectedPlayer?: string
 }
 
 export function HockeyRink({
@@ -57,20 +58,21 @@ export function HockeyRink({
   visualizations = {
     shotDensity: false,
     goalDensity: true,
-    expectedGoalDensity: false,
     successfulPass: true,
     unsuccessfulPass: false,
-    entryRoutes: false,
-    possessionChain: false,
+    eventHeatmap: false,
     penaltyLocation: false,
   },
   shotCoordinates = [],
   goalCoordinates = [],
   activeEvents = [],
+  events = [],
   playerNumbers = {},
   homeColor,
   awayColor,
   eventColors = {},
+  selectedTeam = "all",
+  selectedPlayer = "all",
 }: HockeyRinkProps) {
   // Config via env
   const RADIUS = Number(import.meta.env.VITE_PLAYER_NODE_RADIUS ?? 12)
@@ -139,17 +141,32 @@ export function HockeyRink({
     )
   }, [activeEvents])
 
-  // Derive pass arrows (successful / unsuccessful)
+  const normalize = (s: string | null | undefined) => s?.trim().toLowerCase() ?? ""
+
   const passArrows = React.useMemo(() => {
-    return activeEvents.filter(
-      (ev) =>
-        ev.x_coordinate != null &&
-        ev.y_coordinate != null &&
-        ev.x_coordinate_2 != null &&
-        ev.y_coordinate_2 != null &&
-        (ev.event?.toLowerCase() === "play" || ev.event?.toLowerCase() === "incomplete play")
-    )
-  }, [activeEvents])
+    return events.filter((ev) => {
+      if (
+        ev.x_coordinate == null ||
+        ev.y_coordinate == null ||
+        ev.x_coordinate_2 == null ||
+        ev.y_coordinate_2 == null
+      )
+        return false
+
+      const evType = ev.event?.toLowerCase() ?? ""
+      if (evType !== "play" && evType !== "incomplete play") return false
+
+      // Player filter takes precedence
+      if (selectedPlayer !== "all") {
+        const pNorm = normalize(selectedPlayer)
+        if (normalize(ev.player) !== pNorm && normalize(ev.player_2) !== pNorm) return false
+      } else if (selectedTeam !== "all") {
+        if (normalize(ev.team) !== normalize(selectedTeam)) return false
+      }
+
+      return true
+    })
+  }, [events, selectedPlayer, selectedTeam])
 
   // Helper functions to map rink coordinates from dataset (0-200 x, 0-85 y)
   const mapX = (x: number) => rinkLeft + (x / 200) * rinkWidth
@@ -175,6 +192,54 @@ export function HockeyRink({
   }, [goalCoordinates])
 
   const maxGoalCount = React.useMemo(() => goalDensityAggregated.reduce((m, b) => Math.max(m, b.count), 1), [goalDensityAggregated])
+
+  // Aggregate all event coordinates (filtered) for event heatmap
+  const filteredEventsForHeat = React.useMemo(() => {
+    return events.filter((ev) => {
+      if (ev.x_coordinate == null || ev.y_coordinate == null) return false
+      if (selectedPlayer !== "all") {
+        const pNorm = normalize(selectedPlayer)
+        if (normalize(ev.player) !== pNorm && normalize(ev.player_2) !== pNorm) return false
+      } else if (selectedTeam !== "all") {
+        if (normalize(ev.team) !== normalize(selectedTeam)) return false
+      }
+      return true
+    })
+  }, [events, selectedPlayer, selectedTeam])
+
+  const eventDensityAggregated = React.useMemo(() => {
+    const buckets = new Map<string, { x: number; y: number; count: number }>()
+    const key = (x: number, y: number) => `${x.toFixed(1)},${y.toFixed(1)}`
+
+    filteredEventsForHeat.forEach((ev) => {
+      const k = key(ev.x_coordinate as number, ev.y_coordinate as number)
+      const existing = buckets.get(k)
+      if (existing) {
+        existing.count += 1
+      } else {
+        buckets.set(k, { x: ev.x_coordinate as number, y: ev.y_coordinate as number, count: 1 })
+      }
+    })
+
+    return Array.from(buckets.values())
+  }, [filteredEventsForHeat])
+
+  const maxEventCount = React.useMemo(() => eventDensityAggregated.reduce((m, b) => Math.max(m, b.count), 1), [eventDensityAggregated])
+
+  const penaltyEvents = React.useMemo(() => {
+    return events.filter((ev) => {
+      const evType = ev.event?.toLowerCase() ?? ""
+      if (!evType.includes("penalty")) return false
+      if (ev.x_coordinate == null || ev.y_coordinate == null) return false
+      if (selectedPlayer !== "all") {
+        const pNorm = normalize(selectedPlayer)
+        if (normalize(ev.player) !== pNorm && normalize(ev.player_2) !== pNorm) return false
+      } else if (selectedTeam !== "all") {
+        if (normalize(ev.team) !== normalize(selectedTeam)) return false
+      }
+      return true
+    })
+  }, [events, selectedPlayer, selectedTeam])
 
   return (
     <TooltipProvider>
@@ -210,6 +275,10 @@ export function HockeyRink({
             <radialGradient id="goalGradient" cx="50%" cy="50%" r="50%">
               <stop offset="0%" stopColor="#10b981" stopOpacity="0.8" />
               <stop offset="100%" stopColor="#10b981" stopOpacity="0" />
+            </radialGradient>
+            <radialGradient id="eventGradient" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stopColor="#6b7280" stopOpacity="0.8" />
+              <stop offset="100%" stopColor="#6b7280" stopOpacity="0" />
             </radialGradient>
           </defs>
           {/* Ice surface */}
@@ -604,149 +673,26 @@ export function HockeyRink({
               </g>
             )}
 
-            {/* Expected Goal Density */}
-            {visualizations.expectedGoalDensity && (
-              <g>
-                <circle cx={centerX - 130} cy={centerY} r="30" fill="#8b5cf6" opacity="0.5" />
-                <circle cx={centerX + 135} cy={centerY - 10} r="25" fill="#7c3aed" opacity="0.5" />
-                <circle cx={centerX - 45} cy={centerY + 40} r="20" fill="#6d28d9" opacity="0.5" />
-              </g>
-            )}
-
-            {/* Successful Passes */}
-            {visualizations.successfulPass && (
-              <g>
-                <line
-                  x1={centerX - 100}
-                  y1={centerY - 30}
-                  x2={centerX - 80}
-                  y2={centerY + 40}
-                  stroke="#10b981"
-                  strokeWidth="3"
-                  opacity="0.8"
-                />
-                <line
-                  x1={centerX + 100}
-                  y1={centerY + 30}
-                  x2={centerX + 80}
-                  y2={centerY - 40}
-                  stroke="#10b981"
-                  strokeWidth="3"
-                  opacity="0.8"
-                />
-              </g>
-            )}
-
-            {/* Unsuccessful Passes */}
-            {visualizations.unsuccessfulPass && (
-              <g>
-                <line
-                  x1={centerX - 150}
-                  y1={centerY}
-                  x2={centerX - 50}
-                  y2={centerY + 60}
-                  stroke="#ef4444"
-                  strokeWidth="3"
-                  strokeDasharray="5,5"
-                  opacity="0.8"
-                />
-                <line
-                  x1={centerX + 150}
-                  y1={centerY}
-                  x2={centerX + 50}
-                  y2={centerY - 60}
-                  stroke="#ef4444"
-                  strokeWidth="3"
-                  strokeDasharray="5,5"
-                  opacity="0.8"
-                />
-              </g>
-            )}
-
-            {/* Entry Routes */}
-            {visualizations.entryRoutes && (
-              <g>
-                <path
-                  d={`M ${centerX - 200} ${centerY - 50} Q ${centerX - 100} ${centerY - 80} ${centerX - 50} ${centerY - 20}`}
-                  stroke="#3b82f6"
-                  strokeWidth="4"
-                  fill="none"
-                  opacity="0.8"
-                />
-                <path
-                  d={`M ${centerX + 200} ${centerY + 50} Q ${centerX + 100} ${centerY + 80} ${centerX + 50} ${centerY + 20}`}
-                  stroke="#3b82f6"
-                  strokeWidth="4"
-                  fill="none"
-                  opacity="0.8"
-                />
-              </g>
-            )}
-
-            {/* Possession Chain */}
-            {visualizations.possessionChain && (
-              <g>
-                <circle cx={centerX - 120} cy={centerY - 30} r="8" fill="#f59e0b" opacity="0.9" />
-                <circle cx={centerX - 80} cy={centerY + 10} r="8" fill="#f59e0b" opacity="0.9" />
-                <circle cx={centerX - 40} cy={centerY - 20} r="8" fill="#f59e0b" opacity="0.9" />
-                <line
-                  x1={centerX - 120}
-                  y1={centerY - 30}
-                  x2={centerX - 80}
-                  y2={centerY + 10}
-                  stroke="#f59e0b"
-                  strokeWidth="2"
-                  opacity="0.9"
-                />
-                <line
-                  x1={centerX - 80}
-                  y1={centerY + 10}
-                  x2={centerX - 40}
-                  y2={centerY - 20}
-                  stroke="#f59e0b"
-                  strokeWidth="2"
-                  opacity="0.9"
-                />
-              </g>
-            )}
-
-            {/* Penalty Locations */}
-            {visualizations.penaltyLocation && (
-              <g>
-                <circle cx={centerX + 60} cy={centerY - 40} r="12" fill="#ef4444" opacity="0.8" />
-                <text
-                  x={centerX + 60}
-                  y={centerY - 35}
-                  textAnchor="middle"
-                  fill="white"
-                  fontSize="10"
-                  fontWeight="bold"
-                >
-                  P
-                </text>
-                <circle cx={centerX - 90} cy={centerY + 50} r="12" fill="#ef4444" opacity="0.8" />
-                <text
-                  x={centerX - 90}
-                  y={centerY + 55}
-                  textAnchor="middle"
-                  fill="white"
-                  fontSize="10"
-                  fontWeight="bold"
-                >
-                  P
-                </text>
-              </g>
-            )}
-
-            {/* Successful / Incomplete Plays (dynamic arrows) */}
-            {passArrows.length > 0 && (
+            {/* Successful / Unsuccessful Passes - dynamic arrows */}
+            {(visualizations.successfulPass || visualizations.unsuccessfulPass) && passArrows.length > 0 && (
               <g>
                 {passArrows.map((ev, idx) => {
+                  const evType = ev.event?.toLowerCase() ?? ""
+                  const isSuccessful = evType === "play"
+                  const isUnsuccessful = evType === "incomplete play"
+
+                  if ((isSuccessful && !visualizations.successfulPass) || (isUnsuccessful && !visualizations.unsuccessfulPass)) {
+                    return null
+                  }
+
                   const x1 = mapX(ev.x_coordinate as number)
                   const y1 = mapY(ev.y_coordinate as number)
                   const x2 = mapX(ev.x_coordinate_2 as number)
                   const y2 = mapY(ev.y_coordinate_2 as number)
-                  const color = eventColors[ev.event?.toLowerCase() ?? ""] ?? (ev.event?.toLowerCase() === "play" ? "#10b981" : "#ef4444")
+
+                  const color = isSuccessful
+                    ? eventColors["play"] ?? "#10b981"
+                    : eventColors["incomplete play"] ?? "#ef4444"
 
                   // Arrow head calculation
                   const dx = x2 - x1
@@ -763,10 +709,6 @@ export function HockeyRink({
                     y: y2 - size * Math.sin(angle + Math.PI / 6),
                   }
 
-                  const shouldRender = ev.event?.toLowerCase() === "play" || ev.event?.toLowerCase() === "incomplete play"
-
-                  if (!shouldRender) return null
-
                   return (
                     <g key={idx} stroke={color} fill={color} strokeWidth={2} opacity={0.9}>
                       <line x1={x1} y1={y1} x2={x2} y2={y2} />
@@ -774,6 +716,48 @@ export function HockeyRink({
                     </g>
                   )
                 })}
+              </g>
+            )}
+
+            {/* Event Heatmap */}
+            {visualizations.eventHeatmap && eventDensityAggregated.length > 0 && (
+              <g>
+                {eventDensityAggregated.map((c, idx) => {
+                  const intensity = c.count / maxEventCount
+                  const radius = 5 + intensity * 20
+                  const opacityVal = 0.3 + intensity * 0.7
+                  return (
+                    <circle
+                      key={idx}
+                      cx={mapX(c.x)}
+                      cy={mapY(c.y)}
+                      r={radius}
+                      fill="url(#eventGradient)"
+                      opacity={opacityVal}
+                    />
+                  )
+                })}
+              </g>
+            )}
+
+            {/* Penalty Locations */}
+            {visualizations.penaltyLocation && penaltyEvents.length > 0 && (
+              <g>
+                {penaltyEvents.map((ev, idx) => (
+                  <g key={idx}>
+                    <circle cx={mapX(ev.x_coordinate as number)} cy={mapY(ev.y_coordinate as number)} r="10" fill="#ef4444" opacity="0.8" />
+                    <text
+                      x={mapX(ev.x_coordinate as number)}
+                      y={mapY(ev.y_coordinate as number) + 3}
+                      textAnchor="middle"
+                      fill="white"
+                      fontSize="8"
+                      fontWeight="bold"
+                    >
+                      P
+                    </text>
+                  </g>
+                ))}
               </g>
             )}
           </g>

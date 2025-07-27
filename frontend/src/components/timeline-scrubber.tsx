@@ -310,7 +310,7 @@ export function TimelineScrubber({ events, selectedPlayer, selectedTeam, eventTy
               <span className="text-[10px] text-muted-foreground text-right">
                 {teamAbbr(awayTeamName)}
               </span>
-              <span className="text-[10px] text-muted-foreground mt-3 text-right">
+              <span className="text-[10px] text-muted-foreground mt-1 text-right">
                 {teamAbbr(homeTeamName)}
               </span>
             </div>
@@ -343,7 +343,7 @@ export function TimelineScrubber({ events, selectedPlayer, selectedTeam, eventTy
             />
 
             {/* Period separation lines */}
-            <div className="absolute top-0 left-0 w-full h-8 pointer-events-none z-10">
+            <div className="absolute top-0 left-0 w-full h-10 pointer-events-none z-10">
               {periodSegments.map((seg, idx) => (
                 idx > 0 && (
                   <div
@@ -363,11 +363,11 @@ export function TimelineScrubber({ events, selectedPlayer, selectedTeam, eventTy
               {/* Divider between team rows */}
               <div
                 className="absolute left-0 w-full h-px bg-border"
-                style={{ top: "16px" }}
+                style={{ top: "17px" }}
               />
               {filteredEvents.map((event) => {
                 const isHome = event.team?.toLowerCase() === (homeTeamName ?? "").toLowerCase()
-                const rowOffset = isHome ? 18 : 0 // px for row separation
+                const rowOffset = isHome ? 20 : 0 // px for row separation
                 return (
                   <div
                     key={event.id}
