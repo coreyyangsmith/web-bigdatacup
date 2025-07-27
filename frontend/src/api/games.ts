@@ -81,4 +81,22 @@ export async function fetchPlayers(): Promise<PlayerInfo[]> {
   const res = await fetch(`${API_BASE_URL}/players`);
   if (!res.ok) throw new Error("Failed to fetch players");
   return res.json();
+}
+
+export interface GameExport {
+  game: {
+    id: number;
+    game_date: string;
+    home_team: string;
+    away_team: string;
+  };
+  events: Event[];
+}
+
+export async function exportGameData(gameId: number): Promise<GameExport> {
+  const res = await fetch(`${API_BASE_URL}/games/${gameId}/export`)
+  if (!res.ok) {
+    throw new Error("Failed to export game data")
+  }
+  return res.json()
 } 

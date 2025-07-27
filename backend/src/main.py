@@ -175,6 +175,40 @@ async def game_goal_density(game_id: int, team: str | None = None, db: Session =
     return [{"x": r.x, "y": r.y} for r in rows]
 
 
+@app.get("/games/{game_id}/export", tags=["Games"])
+async def export_game_data(game_id: int, db: Session = Depends(get_db)):
+    """Return full game metadata and all associated events for the given game id.
+
+    The payload structure is::
+        {
+            "game": { ... },
+            "events": [ { ... }, ... ]
+        }
+    """
+
+    # Fetch game record
+    game_obj = db.query(Game).filter(Game.id == game_id).first()
+    if not game_obj:
+        raise HTTPException(status_code=404, detail="Game not found")
+
+    # Fetch all events that belong to this game
+    events_q = (
+        db.query(Event)
+        .filter(
+            Event.game_date == game_obj.game_date,
+            Event.home_team == game_obj.home_team,
+            Event.away_team == game_obj.away_team,
+        )
+        .all()
+    )
+
+    # Convert SQLAlchemy models to pydantic dicts for JSON response
+    game_data = GameSchema.model_validate(game_obj).model_dump()
+    event_data = [EventSchema.model_validate(ev).model_dump() for ev in events_q]
+
+    return {"game": game_data, "events": event_data}
+
+
 @app.get("/events", response_model=list[EventSchema], tags=["Events"])
 async def list_events(limit: int = 100, skip: int = 0, db: Session = Depends(get_db)):
     """Return up to *limit* events from the database for demo purposes."""

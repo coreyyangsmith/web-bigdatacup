@@ -6,8 +6,8 @@ import { AppSidebar } from "../components/app-sidebar"
 import { PannableHockeyRink } from "../components/rink/pannable-hockey-rink"
 import { GameTable } from "../components/game-table"
 
-import { fetchGameEvents, fetchGameShotDensity, fetchGameGoalDensity, fetchEventTypes, fetchPlayers } from "@/api/games"
-import type { Event as GameEvent, ShotCoordinate } from "@/api/games"
+import { fetchGameEvents, fetchGameShotDensity, fetchGameGoalDensity, fetchEventTypes, fetchPlayers, exportGameData } from "@/api/games"
+import type { Event as GameEvent, ShotCoordinate, GameExport } from "@/api/games"
 import type { PlayerInfo } from "@/api/games"
 import { TimelineScrubber } from "../components/timeline-scrubber"
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
@@ -202,47 +202,30 @@ export default function HockeyDashboard() {
     })
   }, [events, currentTime, selectedPlayer, selectedTeam])
 
-  const handleExportData = () => {
-    try {
-      // Create sample data for export
-      const exportData = {
-        game: {
-          homeTeam: selectedGame.homeTeam,
-          awayTeam: selectedGame.awayTeam,
-          date: selectedGame.date,
-          score: selectedGame.score,
-        },
-        currentTime: currentTime,
-        visualizations: {
-          opacity: opacity,
-          timestamp: new Date().toISOString(),
-        },
-        players: [
-          { name: "A. Matthews", team: "home", goals: 2, assists: 1, shots: 6 },
-          { name: "M. Marner", team: "home", goals: 1, assists: 2, shots: 4 },
-          { name: "D. Pastrnak", team: "away", goals: 1, assists: 0, shots: 5 },
-          { name: "B. Marchand", team: "away", goals: 1, assists: 1, shots: 3 },
-        ],
-      }
+  const handleExportData = async () => {
+    if (!selectedGame) return
 
-      // Create and download JSON file
-      const dataStr = JSON.stringify(exportData, null, 2)
-      const dataBlob = new Blob([dataStr], { type: "application/json" })
+    try {
+      const exportData: GameExport = await exportGameData(selectedGame.id)
+
+      // Build filename with date part of game_date or today fallback
+      const dateStr = (exportData.game.game_date || new Date().toISOString()).split("T")[0]
+      const filename = `hockey-analytics-${exportData.game.home_team}-vs-${exportData.game.away_team}-${dateStr}.json`
+
+      const dataBlob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" })
       const url = URL.createObjectURL(dataBlob)
       const link = document.createElement("a")
       link.href = url
-      link.download = `hockey-analytics-${selectedGame.homeTeam}-vs-${selectedGame.awayTeam}-${new Date()
-        .toISOString()
-        .split("T")[0]}.json`
+      link.download = filename
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)
       URL.revokeObjectURL(url)
 
-      toast.success("Game analytics data has been downloaded as JSON file.")
+      toast.success("Game data has been downloaded.")
     } catch (error) {
       console.error(error)
-      toast.error("Failed to export game analytics data. Please try again.")
+      toast.error("Failed to export game data. Please try again.")
     }
   }
 
