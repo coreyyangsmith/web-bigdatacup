@@ -5,6 +5,9 @@ import { GameSelection } from "../components/game-selection"
 import { AppSidebar } from "../components/app-sidebar"
 import { PannableHockeyRink } from "../components/pannable-hockey-rink"
 import { GameTable } from "../components/game-table"
+
+import { fetchGameEvents } from "@/api/games"
+import type { Event as GameEvent } from "@/api/games"
 import { TimelineScrubber } from "../components/timeline-scrubber"
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
 import {
@@ -25,6 +28,9 @@ export default function HockeyDashboard() {
   const [viewMode, setViewMode] = React.useState<"rink" | "table">("rink")
   const [currentTime, setCurrentTime] = React.useState(0)
   const [opacity, setOpacity] = React.useState(75)
+  const [events, setEvents] = React.useState<GameEvent[] | null>(null)
+  const [loadingEvents, setLoadingEvents] = React.useState(false)
+  const [eventsError, setEventsError] = React.useState<string | null>(null)
   const rinkRef = React.useRef<() => void>(null)
 
   const handleExportData = () => {
@@ -84,6 +90,26 @@ export default function HockeyDashboard() {
     })
   }
 
+  // Load events when game selected changes
+  React.useEffect(() => {
+    if (!selectedGame) return
+
+    async function load() {
+      setLoadingEvents(true)
+      setEventsError(null)
+      try {
+        const evs = await fetchGameEvents(selectedGame.id)
+        setEvents(evs)
+      } catch (err: any) {
+        setEventsError(err?.message ?? "Failed to load events")
+      } finally {
+        setLoadingEvents(false)
+      }
+    }
+
+    load()
+  }, [selectedGame])
+
   if (!selectedGame) {
     return <GameSelection onGameSelect={setSelectedGame} />
   }
@@ -134,13 +160,17 @@ export default function HockeyDashboard() {
                 <Card>
                   <CardHeader className="pb-2">
                     <CardDescription>Total Shots</CardDescription>
-                    <CardTitle className="text-2xl">47</CardTitle>
+                    <CardTitle className="text-2xl">
+                      {events ? events.filter((e) => e.event?.toLowerCase() === "shot").length : "-"}
+                    </CardTitle>
                   </CardHeader>
                 </Card>
                 <Card>
                   <CardHeader className="pb-2">
-                    <CardDescription>Shot Accuracy</CardDescription>
-                    <CardTitle className="text-2xl">68%</CardTitle>
+                    <CardDescription>Goals</CardDescription>
+                    <CardTitle className="text-2xl">
+                      {events ? events.filter((e) => e.event?.toLowerCase() === "goal").length : "-"}
+                    </CardTitle>
                   </CardHeader>
                 </Card>
                 <Card>
@@ -191,7 +221,13 @@ export default function HockeyDashboard() {
             </>
           )}
 
-          {viewMode === "table" && <GameTable />}
+          {viewMode === "table" && (
+            <>
+              {loadingEvents && <p>Loading events…</p>}
+              {eventsError && <p className="text-red-500">{eventsError}</p>}
+              {events && <GameTable events={events} />}
+            </>
+          )}
         </div>
       </SidebarInset>
     </SidebarProvider>

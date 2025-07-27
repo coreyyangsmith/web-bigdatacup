@@ -7,8 +7,8 @@ from .db.database import Base, engine, get_db
 from .db.seed import reset_and_seed_db
 from .models import Event
 from .schemas import EventSchema, EventCreate, EventUpdate
-# NEW IMPORT FOR GAMES
 from .schemas import GameSchema
+from .models import Game
 from .db import crud
 
 # Initialise logging before anything else
@@ -83,29 +83,32 @@ async def list_games(db: Session = Depends(get_db)):
     frontend use only and is not persisted in the database.
     """
 
-    unique_games = (
-        db.query(
-            Event.game_date.label("game_date"),
-            Event.home_team.label("home_team"),
-            Event.away_team.label("away_team"),
+    return db.query(Game).all()
+
+
+# ---------------------------------------------------------------------------
+# Game details & events
+# ---------------------------------------------------------------------------
+
+
+@app.get("/games/{game_id}/events", response_model=list[EventSchema], tags=["Games"])
+async def game_events(game_id: int, db: Session = Depends(get_db)):
+    """Return all events belonging to the given game id."""
+
+    game_obj = db.query(Game).filter(Game.id == game_id).first()
+    if not game_obj:
+        raise HTTPException(status_code=404, detail="Game not found")
+
+    events = (
+        db.query(Event)
+        .filter(
+            Event.game_date == game_obj.game_date,
+            Event.home_team == game_obj.home_team,
+            Event.away_team == game_obj.away_team,
         )
-        .distinct()
         .all()
     )
-
-    # Convert query tuples into dicts that match GameSchema fields.
-    games: list[dict] = []
-    for idx, row in enumerate(unique_games, start=1):
-        games.append(
-            {
-                "id": idx,
-                "game_date": row.game_date,
-                "home_team": row.home_team,
-                "away_team": row.away_team,
-            }
-        )
-
-    return games
+    return events
 
 
 @app.get("/events", response_model=list[EventSchema], tags=["Events"])
