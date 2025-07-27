@@ -155,6 +155,27 @@ export function HockeyRink({
   const mapX = (x: number) => rinkLeft + (x / 200) * rinkWidth
   const mapY = (y: number) => rinkTop + (1 - y / 85) * rinkHeight
 
+  // Aggregate goal coordinates by (rounded) location to determine frequency for density sizing
+  const goalDensityAggregated = React.useMemo(() => {
+    const buckets = new Map<string, { x: number; y: number; count: number }>()
+
+    const key = (x: number, y: number) => `${x.toFixed(1)},${y.toFixed(1)}` // 0.1ft precision bucket
+
+    goalCoordinates.forEach((c) => {
+      const k = key(c.x, c.y)
+      const existing = buckets.get(k)
+      if (existing) {
+        existing.count += 1
+      } else {
+        buckets.set(k, { x: c.x, y: c.y, count: 1 })
+      }
+    })
+
+    return Array.from(buckets.values())
+  }, [goalCoordinates])
+
+  const maxGoalCount = React.useMemo(() => goalDensityAggregated.reduce((m, b) => Math.max(m, b.count), 1), [goalDensityAggregated])
+
   return (
     <TooltipProvider>
       <div className="relative border border-border rounded-lg">
@@ -562,12 +583,24 @@ export function HockeyRink({
               </g>
             )}
 
-            {/* Goal Density Heat Map */}
-            {visualizations.goalDensity && (
+            {/* Goal Density Heat Map (data-driven) */}
+            {visualizations.goalDensity && goalDensityAggregated.length > 0 && (
               <g>
-                <circle cx={centerX - 140} cy={centerY - 10} r="25" fill="#10b981" opacity="0.7" />
-                <circle cx={centerX + 140} cy={centerY + 5} r="20" fill="#059669" opacity="0.7" />
-                <circle cx={centerX - 60} cy={centerY + 30} r="15" fill="#047857" opacity="0.7" />
+                {goalDensityAggregated.map((c, idx) => {
+                  const intensity = c.count / maxGoalCount // 0-1
+                  const radius = 12 + intensity * 18 // 12-30 px
+                  const opacityVal = 0.4 + intensity * 0.6 // 0.4-1
+                  return (
+                    <circle
+                      key={idx}
+                      cx={mapX(c.x)}
+                      cy={mapY(c.y)}
+                      r={radius}
+                      fill="url(#goalGradient)"
+                      opacity={opacityVal}
+                    />
+                  )
+                })}
               </g>
             )}
 
@@ -702,15 +735,6 @@ export function HockeyRink({
                 >
                   P
                 </text>
-              </g>
-            )}
-
-            {/* Goal Density Heat Map */}
-            {visualizations.goalDensity && goalCoordinates.length > 0 && (
-              <g>
-                {goalCoordinates.map((c, idx) => (
-                  <circle key={idx} cx={mapX(c.x)} cy={mapY(c.y)} r={18} fill="url(#goalGradient)" />
-                ))}
               </g>
             )}
 

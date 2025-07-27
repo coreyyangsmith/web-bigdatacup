@@ -151,7 +151,7 @@ export default function HockeyDashboard() {
   // ---------------- Derived Stats (shots, goals, etc.) -------------------
   const playerStats = React.useMemo(() => {
     if (!events) {
-      return { shots: 0, goals: 0, zoneEntries: 0, possession: 0 }
+      return { shots: 0, goals: 0, shotAccuracy: 0, penalties: 0 }
     }
 
     // Determine relevant events based on current filters
@@ -166,16 +166,14 @@ export default function HockeyDashboard() {
 
     const shots = relevantEvents.filter((e) => e.event?.toLowerCase() === "shot").length
     const goals = relevantEvents.filter((e) => e.event?.toLowerCase() === "goal").length
-    const zoneEntries = relevantEvents.filter((e) => e.event?.toLowerCase() === "zone entry").length
+    const penalties = relevantEvents.filter((e) => {
+      const ev = e.event?.toLowerCase() ?? ""
+      return ev.includes("penalty")
+    }).length
 
-    // Possession time: rough estimate – span between first and last event for the player
-    let possession = 0
-    if (selectedPlayer !== "all" && relevantEvents.length > 1) {
-      const times = relevantEvents.map(computeAbsoluteTime)
-      possession = Math.max(...times) - Math.min(...times)
-    }
+    const shotAccuracy = shots > 0 ? (goals / shots) * 100 : 0
 
-    return { shots, goals, zoneEntries, possession }
+    return { shots, goals, shotAccuracy, penalties }
   }, [events, selectedPlayer, selectedTeam])
 
   // Helper to format seconds as MM:SS
@@ -395,43 +393,11 @@ export default function HockeyDashboard() {
             <>
               {/* Controls Section */}
               <div className="space-y-4 flex-none">
-                {/* Stats Cards */}
-                <div className="grid auto-rows-min gap-4 md:grid-cols-4">
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardDescription>Total Shots</CardDescription>
-                      <CardTitle className="text-2xl">
-                        {events ? playerStats.shots : "-"}
-                      </CardTitle>
-                    </CardHeader>
-                  </Card>
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardDescription>Goals</CardDescription>
-                      <CardTitle className="text-2xl">
-                        {events ? playerStats.goals : "-"}
-                      </CardTitle>
-                    </CardHeader>
-                  </Card>
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardDescription>Possession Time</CardDescription>
-                      <CardTitle className="text-2xl">
-                        {selectedPlayer === "all" && selectedTeam === "all" ? "-" : formatTime(playerStats.possession)}
-                      </CardTitle>
-                    </CardHeader>
-                  </Card>
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardDescription>Zone Entries</CardDescription>
-                      <CardTitle className="text-2xl">23</CardTitle>
-                    </CardHeader>
-                  </Card>
-                </div>
+
 
                 {/* Team & Player Analysis Controls */}
                 <Card>
-                  <CardHeader className="pb-4">
+                  <CardHeader>
                     <div className="flex items-center justify-between">
                       <div className="space-y-1">
                         <CardTitle>Hockey Rink Visualization</CardTitle>
@@ -488,7 +454,41 @@ export default function HockeyDashboard() {
                   </CardHeader>
                 </Card>
               </div>
-
+                {/* Stats Cards */}
+                <div className="grid auto-rows-min gap-4 md:grid-cols-4">
+                  <Card>
+                    <CardHeader>
+                      <CardDescription>Total Shots</CardDescription>
+                      <CardTitle className="text-2xl">
+                        {events ? playerStats.shots : "-"}
+                      </CardTitle>
+                    </CardHeader>
+                  </Card>
+                  <Card>
+                    <CardHeader>
+                      <CardDescription>Goals</CardDescription>
+                      <CardTitle className="text-2xl">
+                        {events ? playerStats.goals : "-"}
+                      </CardTitle>
+                    </CardHeader>
+                  </Card>
+                  <Card>
+                    <CardHeader>
+                      <CardDescription>Shot Accuracy (%)</CardDescription>
+                      <CardTitle className="text-2xl">
+                        {events ? playerStats.shotAccuracy.toFixed(1) : "-"}
+                      </CardTitle>
+                    </CardHeader>
+                  </Card>
+                  <Card>
+                    <CardHeader>
+                      <CardDescription>Penalties</CardDescription>
+                      <CardTitle className="text-2xl">
+                        {events ? playerStats.penalties : "-"}
+                      </CardTitle>
+                    </CardHeader>
+                  </Card>
+                </div>
               {/* Hockey Rink - Takes up remaining space */}
               <div className="flex-1 min-h-0">
                 <PannableHockeyRink
