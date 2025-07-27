@@ -72,6 +72,9 @@ However, as we are working with X, Y data, and want to create an engaging visual
 
 ### Backend Design
 
+#### Database Design
+Considering we would like to design for an extensible application, with the ability to add future game data if desired, I have opted to include a database and client/server architecture. As we will have very limited writes, and a low-traffic of read operations, `SQLite` will be more than sufficient for our purposes.
+
 ## Implementation
 ### Technical Stack
 
