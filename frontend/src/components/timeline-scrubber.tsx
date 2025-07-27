@@ -224,7 +224,7 @@ export function TimelineScrubber({ events, selectedPlayer, selectedTeam, eventTy
 
           {/* Event Details */}
           {selectedEvent && (
-            <div className="flex items-center gap-2 p-2 bg-muted rounded-lg">
+            <div className="flex items-center gap-2 p-2 bg-muted rounded-lg mt-8">
               <Badge
                 style={{
                   backgroundColor: eventTypeColors[selectedEvent.type] ?? "#64748b",
@@ -240,13 +240,67 @@ export function TimelineScrubber({ events, selectedPlayer, selectedTeam, eventTy
           )}
 
           {/* Event Legend */}
-          <div className="flex flex-wrap items-center gap-3 mt-8 text-xs">
-            {Object.entries(eventTypeColors).map(([etype, color]) => (
-              <div key={etype} className="flex items-center gap-1">
-                <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: color }} />
-                <span>{etype}</span>
-              </div>
-            ))}
+          <div className="mt-8">
+            <h4 className="text-sm font-semibold mb-3">Event Legend</h4>
+            <div className="flex flex-wrap gap-x-6 gap-y-3 text-xs">
+              {/* Scoring Events */}
+              {["goal", "shot"].filter(type => eventTypeColors[type]).map(type => (
+                <div key={type} className="flex items-center gap-1">
+                  <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: eventTypeColors[type] }} />
+                  <span>{type.charAt(0).toUpperCase() + type.slice(1)}</span>
+                </div>
+              ))}
+              
+              {/* Possession Events */}
+              {["puck recovery", "takeaway", "zone entry"].filter(type => eventTypeColors[type]).map(type => (
+                <div key={type} className="flex items-center gap-1">
+                  <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: eventTypeColors[type] }} />
+                  <span>{type.charAt(0).toUpperCase() + type.slice(1)}</span>
+                </div>
+              ))}
+              
+              {/* Face-off Events */}
+              {["faceoff win"].filter(type => eventTypeColors[type]).map(type => (
+                <div key={type} className="flex items-center gap-1">
+                  <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: eventTypeColors[type] }} />
+                  <span>{type.charAt(0).toUpperCase() + type.slice(1)}</span>
+                </div>
+              ))}
+              
+              {/* Penalties */}
+              {["penalty taken"].filter(type => eventTypeColors[type]).map(type => (
+                <div key={type} className="flex items-center gap-1">
+                  <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: eventTypeColors[type] }} />
+                  <span>{type.charAt(0).toUpperCase() + type.slice(1)}</span>
+                </div>
+              ))}
+              
+              {/* General Play Events */}
+              {["play", "incomplete play"].filter(type => eventTypeColors[type]).map(type => (
+                <div key={type} className="flex items-center gap-1">
+                  <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: eventTypeColors[type] }} />
+                  <span>{type.charAt(0).toUpperCase() + type.slice(1)}</span>
+                </div>
+              ))}
+              
+              {/* Dump Events */}
+              {["dump in/out"].filter(type => eventTypeColors[type]).map(type => (
+                <div key={type} className="flex items-center gap-1">
+                  <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: eventTypeColors[type] }} />
+                  <span>{type.charAt(0).toUpperCase() + type.slice(1)}</span>
+                </div>
+              ))}
+              
+              {/* Other Events */}
+              {Object.entries(eventTypeColors).filter(([type]) => 
+                !["goal", "shot", "puck recovery", "takeaway", "zone entry", "faceoff win", "penalty taken", "play", "incomplete play", "dump in/out"].includes(type)
+              ).map(([type, color]) => (
+                <div key={type} className="flex items-center gap-1">
+                  <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: color }} />
+                  <span>{type.charAt(0).toUpperCase() + type.slice(1)}</span>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </CardContent>
