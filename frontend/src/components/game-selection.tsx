@@ -1,67 +1,90 @@
 "use client"
-import { Calendar, Clock, MapPin } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
+import {
+  Table,
+  TableBody,
+  TableHead,
+  TableHeader,
+  TableRow,
+  TableCell,
+} from "@/components/ui/table"
+import { ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react"
+
+import * as React from "react"
+
+import { fetchGames } from "@/api/games"
+import type { Game as ApiGame } from "@/api/games"
 
 interface Game {
-  id: string
+  id: number
   homeTeam: string
   awayTeam: string
   date: string
-  time: string
-  venue: string
-  status: "completed" | "live" | "upcoming"
-  score?: { home: number; away: number }
+  status: "upcoming" // currently derived dataset has no live/completed status
 }
-
-const sampleGames: Game[] = [
-  {
-    id: "1",
-    homeTeam: "Toronto Maple Leafs",
-    awayTeam: "Boston Bruins",
-    date: "2024-01-26",
-    time: "7:00 PM",
-    venue: "Scotiabank Arena",
-    status: "completed",
-    score: { home: 4, away: 2 },
-  },
-  {
-    id: "2",
-    homeTeam: "Montreal Canadiens",
-    awayTeam: "Ottawa Senators",
-    date: "2024-01-26",
-    time: "7:30 PM",
-    venue: "Bell Centre",
-    status: "live",
-    score: { home: 2, away: 1 },
-  },
-  {
-    id: "3",
-    homeTeam: "Calgary Flames",
-    awayTeam: "Edmonton Oilers",
-    date: "2024-01-27",
-    time: "9:00 PM",
-    venue: "Saddledome",
-    status: "upcoming",
-  },
-  {
-    id: "4",
-    homeTeam: "New York Rangers",
-    awayTeam: "Philadelphia Flyers",
-    date: "2024-01-25",
-    time: "7:00 PM",
-    venue: "Madison Square Garden",
-    status: "completed",
-    score: { home: 3, away: 1 },
-  },
-]
 
 interface GameSelectionProps {
   onGameSelect: (game: Game) => void
 }
 
 export function GameSelection({ onGameSelect }: GameSelectionProps) {
+  const [games, setGames] = React.useState<Game[]>([])
+  const [loading, setLoading] = React.useState<boolean>(true)
+  const [error, setError] = React.useState<string | null>(null)
+  const [sortKey, setSortKey] = React.useState<keyof Game | null>(null)
+  const [sortAsc, setSortAsc] = React.useState<boolean>(true)
+
+  React.useEffect(() => {
+    async function load() {
+      try {
+        const apiGames = await fetchGames()
+        // Transform API shape to component shape expected elsewhere in the app
+        const transformed: Game[] = apiGames.map((g: ApiGame) => ({
+          id: g.id,
+          homeTeam: g.home_team,
+          awayTeam: g.away_team,
+          date: g.game_date,
+          status: "upcoming",
+        }))
+        setGames(transformed)
+      } catch (err: any) {
+        setError(err?.message ?? "Unknown error")
+      } finally {
+        setLoading(false)
+      }
+    }
+    load()
+  }, [])
+
+  const sortedGames = React.useMemo(() => {
+    if (!sortKey) return games
+
+    return [...games].sort((a, b) => {
+      const aValue = a[sortKey]
+      const bValue = b[sortKey]
+
+      if (aValue < bValue) return sortAsc ? -1 : 1
+      if (aValue > bValue) return sortAsc ? 1 : -1
+      return 0
+    })
+  }, [games, sortKey, sortAsc])
+
+  const handleSort = (key: keyof Game) => {
+    if (sortKey === key) {
+      setSortAsc(!sortAsc)
+    } else {
+      setSortKey(key)
+      setSortAsc(true)
+    }
+  }
+
+  const renderSortIndicator = (key: keyof Game) => {
+    if (sortKey !== key) {
+      return <ChevronsUpDown className="h-4 w-4 text-muted-foreground/50" />
+    }
+    return sortAsc ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+  }
+
   return (
     <div className="min-h-screen bg-background p-8">
       <div className="max-w-4xl mx-auto">
@@ -70,51 +93,58 @@ export function GameSelection({ onGameSelect }: GameSelectionProps) {
           <p className="text-muted-foreground text-lg">Select a game to analyze</p>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2">
-          {sampleGames.map((game) => (
-            <Card key={game.id} className="cursor-pointer hover:shadow-lg transition-shadow">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg">
-                    {game.awayTeam} @ {game.homeTeam}
-                  </CardTitle>
-                  <Badge
-                    variant={
-                      game.status === "live" ? "destructive" : game.status === "completed" ? "secondary" : "outline"
-                    }
-                  >
-                    {game.status === "live" ? "LIVE" : game.status === "completed" ? "Final" : "Upcoming"}
-                  </Badge>
-                </div>
-                {game.score && (
-                  <div className="text-2xl font-bold">
-                    {game.awayTeam.split(" ").pop()} {game.score.away} - {game.score.home}{" "}
-                    {game.homeTeam.split(" ").pop()}
-                  </div>
-                )}
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2 text-sm text-muted-foreground">
-                  <div className="flex items-center gap-2">
-                    <Calendar className="h-4 w-4" />
-                    {new Date(game.date).toLocaleDateString()}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Clock className="h-4 w-4" />
-                    {game.time}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <MapPin className="h-4 w-4" />
-                    {game.venue}
-                  </div>
-                </div>
-                <Button className="w-full mt-4" onClick={() => onGameSelect(game)}>
-                  Analyze Game
-                </Button>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        {loading && <p className="text-center">Loading games…</p>}
+        {error && <p className="text-center text-red-500">{error}</p>}
+
+        {!loading && !error && (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="cursor-pointer select-none hover:bg-muted/50 transition-colors" onClick={() => handleSort("date")}>
+                  <span className="inline-flex items-center gap-1">Date {renderSortIndicator("date")}</span>
+                </TableHead>
+                <TableHead className="cursor-pointer select-none hover:bg-muted/50 transition-colors" onClick={() => handleSort("awayTeam")}>
+                  <span className="inline-flex items-center gap-1">Away Team {renderSortIndicator("awayTeam")}</span>
+                </TableHead>
+                <TableHead className="cursor-pointer select-none hover:bg-muted/50 transition-colors" onClick={() => handleSort("homeTeam")}>
+                  <span className="inline-flex items-center gap-1">Home Team {renderSortIndicator("homeTeam")}</span>
+                </TableHead>
+                <TableHead>Action</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {sortedGames.map((game) => (
+                <TableRow key={game.id}>
+                  <TableCell>
+                    {new Date(game.date).toLocaleDateString("en-US", {
+                      timeZone: "UTC",
+                      month: "2-digit",
+                      day: "2-digit",
+                      year: "numeric",
+                    })}
+                  </TableCell>
+                  <TableCell>{game.awayTeam}</TableCell>
+                  <TableCell>{game.homeTeam}</TableCell>
+                  <TableCell>
+                    <Button
+                      size="sm"
+                      onClick={() =>
+                        onGameSelect({
+                          ...game,
+                          score: undefined,
+                          time: "",
+                          venue: "",
+                        } as any)
+                      }
+                    >
+                      Analyze Game
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
       </div>
     </div>
   )

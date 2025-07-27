@@ -7,6 +7,8 @@ from .db.database import Base, engine, get_db
 from .db.seed import reset_and_seed_db
 from .models import Event
 from .schemas import EventSchema, EventCreate, EventUpdate
+# NEW IMPORT FOR GAMES
+from .schemas import GameSchema
 from .db import crud
 
 # Initialise logging before anything else
@@ -64,6 +66,46 @@ async def read_item(item_id: int, db: Session = Depends(get_db)):
 async def api_test():
     """Simple endpoint for frontend connectivity testing."""
     return {"status": "ok"}
+
+
+# ---------------------------------------------------------------------------
+# Games endpoints
+# ---------------------------------------------------------------------------
+
+
+@app.get("/games", response_model=list[GameSchema], tags=["Games"])
+async def list_games(db: Session = Depends(get_db)):
+    """Return a list of distinct games derived from the Events table.
+
+    Since the current dataset does not store games in a separate table, we
+    derive unique combinations of (game_date, home_team, away_team) from the
+    events data. An auto-generated incremental identifier is provided for
+    frontend use only and is not persisted in the database.
+    """
+
+    unique_games = (
+        db.query(
+            Event.game_date.label("game_date"),
+            Event.home_team.label("home_team"),
+            Event.away_team.label("away_team"),
+        )
+        .distinct()
+        .all()
+    )
+
+    # Convert query tuples into dicts that match GameSchema fields.
+    games: list[dict] = []
+    for idx, row in enumerate(unique_games, start=1):
+        games.append(
+            {
+                "id": idx,
+                "game_date": row.game_date,
+                "home_team": row.home_team,
+                "away_team": row.away_team,
+            }
+        )
+
+    return games
 
 
 @app.get("/events", response_model=list[EventSchema], tags=["Events"])

@@ -11,7 +11,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 from .database import Base, SessionLocal, engine
-from ..models import Event
+from ..models import Event, Team, Player, Game
 
 
 def reset_and_seed_db() -> None:
@@ -61,13 +61,41 @@ def reset_and_seed_db() -> None:
     # Fill NaNs with None for SQLAlchemy compatibility
     df = df.where(pd.notna(df), None)
 
-    # Bulk insert
+    # ---------------------------------------------------------------------
+    # Prepare Teams, Players, Games, Events
+    # ---------------------------------------------------------------------
+
+    # Unique teams from home/away/team columns
+    team_series = pd.concat([df["home_team"], df["away_team"], df["team"]])
+    unique_team_names = team_series.dropna().unique()
+    teams = [Team(name=name) for name in unique_team_names]
+    logger.info("Prepared %d teams for bulk insert", len(teams))
+
+    # Unique players from player / player_2 columns
+    player_series = pd.concat([df["player"], df["player_2"]])
+    unique_player_names = player_series.dropna().unique()
+    players = [Player(name=name) for name in unique_player_names]
+    logger.info("Prepared %d players for bulk insert", len(players))
+
+    # Unique games based on date + teams
+    unique_games_df = df[["game_date", "home_team", "away_team"]].drop_duplicates()
+    games = [
+        Game(game_date=row.game_date, home_team=row.home_team, away_team=row.away_team)
+        for row in unique_games_df.itertuples(index=False)
+    ]
+    logger.info("Prepared %d games for bulk insert", len(games))
+
+    # Events (one per row)
     records = df.to_dict(orient="records")
     events = [Event(**record) for record in records]
     logger.info("Prepared %d events for bulk insert", len(events))
 
     session: Session = SessionLocal()
     try:
+        # Insert in logical order to respect potential future FKs
+        session.bulk_save_objects(teams)
+        session.bulk_save_objects(players)
+        session.bulk_save_objects(games)
         session.bulk_save_objects(events)
         session.commit()
         logger.info("Database seeding complete")
