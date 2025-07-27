@@ -69,6 +69,22 @@ export function TimelineScrubber({ events, selectedPlayer, eventTypeColors, onTi
     return Math.max(...filteredEvents.map((ev) => ev.time))
   }, [filteredEvents])
 
+  const periodBoundaries = React.useMemo(() => {
+    if (filteredEvents.length === 0) return []
+    const boundaries: number[] = []
+    let currentPeriod = 1
+    let lastTime = 0
+    filteredEvents.forEach((event) => {
+      if (event.period !== currentPeriod) {
+        boundaries.push(lastTime)
+        currentPeriod = event.period
+      }
+      lastTime = event.time
+    })
+    boundaries.push(lastTime) // Add the last event's time
+    return boundaries
+  }, [filteredEvents])
+
   const [currentTime, setCurrentTime] = React.useState([0])
   const [isPlaying, setIsPlaying] = React.useState(false)
   const [selectedEvent, setSelectedEvent] = React.useState<TimelineEvent | null>(null)
@@ -166,6 +182,21 @@ export function TimelineScrubber({ events, selectedPlayer, eventTypeColors, onTi
               step={1}
               className="w-full"
             />
+
+            {/* Period separation lines */}
+            <div className="absolute top-0 left-0 w-full h-6 pointer-events-none">
+              {periodBoundaries.map((t, idx) => (
+                idx > 0 && (
+                  <div
+                    key={`period-${idx}`}
+                    className="absolute top-0 h-6 border-l border-border text-[10px] text-muted-foreground select-none"
+                    style={{ left: `${(t / maxTime) * 100}%` }}
+                  >
+                    <span className="absolute -top-4 -ml-2">{idx + 1 <= 3 ? `P${idx + 1}` : "OT"}</span>
+                  </div>
+                )
+              ))}
+            </div>
 
             {/* Event Markers */}
             <div className="absolute top-0 left-0 w-full h-6 pointer-events-none">

@@ -12,6 +12,8 @@ from .schemas import GameSchema
 from .models import Game
 from .db import crud
 from .schemas.shot import ShotCoordinateSchema
+from .schemas.player import PlayerSchema
+from .models import Player
 
 # Initialise logging before anything else
 from .utils.logger import logger
@@ -147,6 +149,32 @@ async def game_shot_density(game_id: int, team: str | None = None, db: Session =
     return [{"x": r.x, "y": r.y} for r in rows]
 
 
+@app.get("/games/{game_id}/goal-density", response_model=list[ShotCoordinateSchema], tags=["Games"])
+async def game_goal_density(game_id: int, team: str | None = None, db: Session = Depends(get_db)):
+    """Return all (x, y) goal coordinates for the given game."""
+
+    game_obj = db.query(Game).filter(Game.id == game_id).first()
+    if not game_obj:
+        raise HTTPException(status_code=404, detail="Game not found")
+
+    query = (
+        db.query(Event.x_coordinate.label("x"), Event.y_coordinate.label("y"))
+        .filter(
+            Event.game_date == game_obj.game_date,
+            Event.home_team == game_obj.home_team,
+            Event.away_team == game_obj.away_team,
+            Event.event.ilike("goal"),
+            Event.x_coordinate.isnot(None),
+            Event.y_coordinate.isnot(None),
+        )
+    )
+    if team:
+        query = query.filter(Event.team == team)
+
+    rows = query.all()
+    return [{"x": r.x, "y": r.y} for r in rows]
+
+
 @app.get("/events", response_model=list[EventSchema], tags=["Events"])
 async def list_events(limit: int = 100, skip: int = 0, db: Session = Depends(get_db)):
     """Return up to *limit* events from the database for demo purposes."""
@@ -159,6 +187,14 @@ async def list_event_types(db: Session = Depends(get_db)):
     result = db.execute(select(distinct(Event.event))).scalars().all()
     # Filter None and sort
     return sorted(filter(None, result))
+
+
+@app.get("/players", response_model=list[PlayerSchema], tags=["Players"])
+async def list_players(limit: int | None = None, db: Session = Depends(get_db)):
+    query = db.query(Player)
+    if limit:
+        query = query.limit(limit)
+    return query.all()
 
 
 # CRUD endpoints

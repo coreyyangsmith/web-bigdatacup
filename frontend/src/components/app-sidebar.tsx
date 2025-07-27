@@ -1,5 +1,5 @@
 import type * as React from "react"
-import { BarChart3, Eye, Layers, Target, Users, Table, RatIcon as Rink } from "lucide-react"
+import { BarChart3, Eye, Layers, Target, Users, Table, RatIcon as Rink, Settings } from "lucide-react"
 
 import {
   Sidebar,
@@ -70,9 +70,30 @@ interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
   onShowZonesChange: (v: boolean) => void
   showNumbers: boolean
   onShowNumbersChange: (v: boolean) => void
-  players: string[]
-  selectedPlayer: string
-  onSelectedPlayerChange: (player: string) => void
+  visualizations: {
+    shotDensity: boolean
+    goalDensity: boolean
+    expectedGoalDensity: boolean
+    successfulPass: boolean
+    unsuccessfulPass: boolean
+    entryRoutes: boolean
+    possessionChain: boolean
+    penaltyLocation: boolean
+  }
+  onVisualizationsChange: (v: {
+    shotDensity: boolean
+    goalDensity: boolean
+    expectedGoalDensity: boolean
+    successfulPass: boolean
+    unsuccessfulPass: boolean
+    entryRoutes: boolean
+    possessionChain: boolean
+    penaltyLocation: boolean
+  }) => void
+  homeColor?: string
+  awayColor?: string
+  onHomeColorChange?: (c: string) => void
+  onAwayColorChange?: (c: string) => void
 }
 
 export function AppSidebar({
@@ -87,9 +108,12 @@ export function AppSidebar({
   onShowZonesChange,
   showNumbers,
   onShowNumbersChange,
-  players,
-  selectedPlayer,
-  onSelectedPlayerChange,
+  visualizations,
+  onVisualizationsChange,
+  homeColor = import.meta.env.VITE_PLAYER_NODE_FILL_HOME ?? "#2563eb",
+  awayColor = import.meta.env.VITE_PLAYER_NODE_FILL_AWAY ?? "#dc2626",
+  onHomeColorChange = () => {},
+  onAwayColorChange = () => {},
   // Settings callbacks reserved
   ...props
 }: AppSidebarProps) {
@@ -130,29 +154,7 @@ export function AppSidebar({
           </Button>
         </div>
 
-        {/* Player Analysis - Only visible in Rink mode */}
-        {viewMode === "rink" && (
-          <div className="mt-4">
-            <Label className="text-sm font-medium">Player Analysis</Label>
-            <Select value={selectedPlayer} onValueChange={onSelectedPlayerChange}>
-              <SelectTrigger className="w-full mt-1">
-                <SelectValue placeholder="Select player" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Players</SelectItem>
-                <SelectSeparator />
-                <SelectGroup>
-                  <SelectLabel>Players</SelectLabel>
-                  {players.map((p) => (
-                    <SelectItem key={p} value={p}>
-                      {p}
-                    </SelectItem>
-                  ))}
-                </SelectGroup>
-              </SelectContent>
-            </Select>
-          </div>
-        )}
+        {/* Player Analysis removed from sidebar */}
       </SidebarHeader>
 
       {viewMode === "rink" && (
@@ -176,7 +178,14 @@ export function AppSidebar({
                           <Label htmlFor={item.name} className="text-sm font-normal">
                             {item.name}
                           </Label>
-                          <Switch id={item.name} defaultChecked={item.active} />
+                          <Switch
+                            id={item.name}
+                            checked={visualizations[item.name === "Shot Density" ? "shotDensity" : item.name === "Goal Density" ? "goalDensity" : "shotDensity"]}
+                            onCheckedChange={(checked) => {
+                              const key = item.name === "Shot Density" ? "shotDensity" : item.name === "Goal Density" ? "goalDensity" : "shotDensity"
+                              onVisualizationsChange({ ...visualizations, [key]: checked })
+                            }}
+                          />
                         </div>
                       ))}
                     </div>
@@ -232,7 +241,37 @@ export function AppSidebar({
             </SidebarGroupContent>
           </SidebarGroup>
 
-          {/* Settings group reserved for future options */}
+          {/* Settings group */}
+          <SidebarSeparator />
+          <SidebarGroup>
+            <SidebarGroupLabel className="flex items-center gap-2">
+              <Settings className="h-4 w-4" />
+              Settings
+            </SidebarGroupLabel>
+            <SidebarGroupContent>
+              <div className="space-y-4 px-2">
+                <div>
+                  <Label className="text-sm font-medium">Home Team Color</Label>
+                  <input
+                    type="color"
+                    value={homeColor}
+                    onChange={(e) => onHomeColorChange(e.target.value)}
+                    className="w-full h-8 mt-1 rounded"
+                  />
+                </div>
+                <div>
+                  <Label className="text-sm font-medium">Away Team Color</Label>
+                  <input
+                    type="color"
+                    value={awayColor}
+                    onChange={(e) => onAwayColorChange(e.target.value)}
+                    className="w-full h-8 mt-1 rounded"
+                  />
+                </div>
+              </div>
+            </SidebarGroupContent>
+          </SidebarGroup>
+
         </SidebarContent>
       )}
 

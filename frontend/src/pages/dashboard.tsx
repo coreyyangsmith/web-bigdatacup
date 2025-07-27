@@ -6,8 +6,9 @@ import { AppSidebar } from "../components/app-sidebar"
 import { PannableHockeyRink } from "../components/rink/pannable-hockey-rink"
 import { GameTable } from "../components/game-table"
 
-import { fetchGameEvents, fetchGameShotDensity, fetchEventTypes } from "@/api/games"
+import { fetchGameEvents, fetchGameShotDensity, fetchGameGoalDensity, fetchEventTypes, fetchPlayers } from "@/api/games"
 import type { Event as GameEvent, ShotCoordinate } from "@/api/games"
+import type { PlayerInfo } from "@/api/games"
 import { TimelineScrubber } from "../components/timeline-scrubber"
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
 import {
@@ -23,6 +24,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { ArrowLeft, Download, FullscreenIcon as FullScreen, ZoomIn, ZoomOut } from "lucide-react"
 import { toast } from "react-toastify"
 import { getEventTypeColorMap } from "@/themes/event-colors"
+import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectSeparator, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Input } from "@/components/ui/input"
 
 export default function HockeyDashboard() {
   const [selectedGame, setSelectedGame] = React.useState<any>(null)
@@ -36,10 +40,53 @@ export default function HockeyDashboard() {
   const [loadingEvents, setLoadingEvents] = React.useState(false)
   const [eventsError, setEventsError] = React.useState<string | null>(null)
   const [shotCoords, setShotCoords] = React.useState<ShotCoordinate[] | null>(null)
+  const [goalCoords, setGoalCoords] = React.useState<ShotCoordinate[] | null>(null)
   const [selectedPlayer, setSelectedPlayer] = React.useState<string>("all")
-  const [players, setPlayers] = React.useState<string[]>([])
   const [eventTypeColors, setEventTypeColors] = React.useState<Record<string, string>>({})
+  const [homeColor, setHomeColor] = React.useState<string>(import.meta.env.VITE_PLAYER_NODE_FILL_HOME ?? "#2563eb")
+  const [awayColor, setAwayColor] = React.useState<string>(import.meta.env.VITE_PLAYER_NODE_FILL_AWAY ?? "#dc2626")
+  const [playerNumbers, setPlayerNumbers] = React.useState<Record<string, number | null>>({})
+  const [gamePlayers, setGamePlayers] = React.useState<PlayerInfo[]>([])
+  const [playerTeamMap, setPlayerTeamMap] = React.useState<Record<string, string>>({})
   const rinkRef = React.useRef<() => void>(null)
+  const [visualizations, setVisualizations] = React.useState({
+    shotDensity: true,
+    goalDensity: true,
+    expectedGoalDensity: false,
+    successfulPass: false,
+    unsuccessfulPass: false,
+    entryRoutes: false,
+    possessionChain: false,
+    penaltyLocation: false,
+  })
+
+  const PERIOD_SECONDS = 20 * 60
+  const clockToSecondsRemaining = (clock: string): number => {
+    const [minStr, secStr] = clock.split(":")
+    return parseInt(minStr, 10) * 60 + parseInt(secStr, 10)
+  }
+
+  const computeAbsoluteTime = (ev: GameEvent): number => {
+    const secRemaining = clockToSecondsRemaining(ev.clock)
+    const elapsed = PERIOD_SECONDS - secRemaining
+    return (ev.period - 1) * PERIOD_SECONDS + elapsed
+  }
+
+  const teamAbbr = React.useCallback((teamName: string | undefined | null): string => {
+    if (!teamName) return "";
+    const seg = teamName.split("-").pop()?.trim() ?? teamName;
+    const letters = seg.replace(/[^A-Za-z]/g, "").toUpperCase();
+    if (letters.length >= 3) return letters.slice(0, 3);
+    return (letters + "XXX").slice(0, 3);
+  }, []);
+
+  const activeEvents = React.useMemo(() => {
+    if (!events) return []
+    return events.filter((ev) => {
+      if (selectedPlayer !== "all" && ev.player?.toLowerCase() !== selectedPlayer.toLowerCase()) return false
+      return Math.abs(computeAbsoluteTime(ev) - currentTime) < 1
+    })
+  }, [events, currentTime, selectedPlayer])
 
   const handleExportData = () => {
     try {
@@ -106,20 +153,43 @@ export default function HockeyDashboard() {
       setLoadingEvents(true)
       setEventsError(null)
       try {
-        const [evs, shots, eventTypes] = await Promise.all([
+        const [evs, shots, goals, eventTypes] = await Promise.all([
           fetchGameEvents(selectedGame.id),
           fetchGameShotDensity(selectedGame.id),
+          fetchGameGoalDensity(selectedGame.id),
           fetchEventTypes(),
         ])
         setEvents(evs)
         setShotCoords(shots)
+        setGoalCoords(goals)
         // Build unique player list
         const unique = Array.from(new Set(evs.map((e) => e.player).filter(Boolean))) as string[]
         unique.sort((a, b) => a.localeCompare(b))
-        setPlayers(unique)
-
         // Build color mapping
         setEventTypeColors(getEventTypeColorMap(eventTypes))
+
+        const playersList = await fetchPlayers()
+
+        // Filter to players present in this game's events
+        const involved: Set<string> = new Set()
+        const teamMap: Record<string, string> = {}
+        evs.forEach((ev) => {
+          if (ev.player) involved.add(ev.player.trim().toLowerCase())
+          if (ev.player_2) involved.add(ev.player_2.trim().toLowerCase())
+
+          if (ev.player) teamMap[ev.player.trim().toLowerCase()] = ev.team
+          if (ev.player_2) teamMap[ev.player_2.trim().toLowerCase()] = ev.team
+        })
+        setPlayerTeamMap(teamMap)
+
+        const filteredPlayers = playersList.filter((p) => involved.has(p.name.trim().toLowerCase()))
+        setGamePlayers(filteredPlayers)
+
+        const numMap: Record<string, number | null> = {}
+        playersList.forEach((p: PlayerInfo) => {
+          numMap[p.name.trim().toLowerCase()] = p.number ?? null
+        })
+        setPlayerNumbers(numMap)
       } catch (err: any) {
         setEventsError(err?.message ?? "Failed to load events")
       } finally {
@@ -128,6 +198,43 @@ export default function HockeyDashboard() {
     }
 
     load()
+  }, [selectedGame])
+
+  // --- Initialise default team colours from .env when game changes ---------
+  React.useEffect(() => {
+    if (!selectedGame) return
+
+    const slug = (name: string) =>
+      name
+        .toUpperCase()
+        .replace(/[^A-Z0-9]+/g, "_")
+        .replace(/^_|_$/g, "")
+
+    // Build candidate env keys (try full name, then last segment after final hyphen)
+    const buildKeys = (teamName: string): string[] => {
+      const full = `VITE_TEAM_COLOR_${slug(teamName)}`
+      const parts = teamName.split("-")
+      const last = parts[parts.length - 1].trim()
+      const simple = `VITE_TEAM_COLOR_${slug(last)}`
+      return [full, simple]
+    }
+
+    const envObj: Record<string, string | undefined> = (import.meta as any).env ?? import.meta.env
+
+    const resolveColor = (keys: string[], fallback: string) => {
+      for (const k of keys) {
+        const val = envObj[k]
+        if (val) return val
+      }
+      return fallback
+    }
+
+    setHomeColor(
+      resolveColor(buildKeys(selectedGame.homeTeam), import.meta.env.VITE_PLAYER_NODE_FILL_HOME ?? "#2563eb")
+    )
+    setAwayColor(
+      resolveColor(buildKeys(selectedGame.awayTeam), import.meta.env.VITE_PLAYER_NODE_FILL_AWAY ?? "#dc2626")
+    )
   }, [selectedGame])
 
   if (!selectedGame) {
@@ -148,9 +255,12 @@ export default function HockeyDashboard() {
         onShowZonesChange={setShowZones}
         showNumbers={showNumbers}
         onShowNumbersChange={setShowNumbers}
-        players={players}
-        selectedPlayer={selectedPlayer}
-        onSelectedPlayerChange={setSelectedPlayer}
+        visualizations={visualizations}
+        onVisualizationsChange={setVisualizations}
+        homeColor={homeColor}
+        awayColor={awayColor}
+        onHomeColorChange={setHomeColor}
+        onAwayColorChange={setAwayColor}
       />
       <SidebarInset>
         <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
@@ -221,11 +331,30 @@ export default function HockeyDashboard() {
               <Card className="flex-1 flex flex-col overflow-auto">
                 <CardHeader>
                   <div className="flex items-center justify-between">
-                    <div>
+                    <div className="space-y-1">
                       <CardTitle>Hockey Rink Visualization</CardTitle>
                       <CardDescription>
                         Interactive hockey rink with overlaid analytics data - drag to pan, scroll to zoom
                       </CardDescription>
+                    </div>
+
+                    {/* Player Analysis Select */}
+                    <div className="flex items-center gap-2">
+                      <Label className="text-sm">Player:</Label>
+                      <Select value={selectedPlayer} onValueChange={setSelectedPlayer}>
+                        <SelectTrigger className="w-40 h-8">
+                          <SelectValue placeholder="All Players" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Players</SelectItem>
+                          <SelectSeparator />
+                          {gamePlayers.map((p) => (
+                            <SelectItem key={p.id} value={p.name.toLowerCase()}>
+                              {teamAbbr(playerTeamMap[p.name.toLowerCase()])} - {p.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
 
                   </div>
@@ -242,16 +371,12 @@ export default function HockeyDashboard() {
                       opacity={opacity}
                       selectedGame={selectedGame}
                       shotCoordinates={shotCoords ?? []}
-                      visualizations={{
-                        shotDensity: true,
-                        goalDensity: true,
-                        expectedGoalDensity: false,
-                        successfulPass: true,
-                        unsuccessfulPass: false,
-                        entryRoutes: false,
-                        possessionChain: false,
-                        penaltyLocation: false,
-                      }}
+                      goalCoordinates={goalCoords ?? []}
+                      playerNumbers={playerNumbers}
+                      homeColor={homeColor}
+                      awayColor={awayColor}
+                      visualizations={visualizations}
+                      activeEvents={activeEvents}
                       ref={rinkRef}
                     />
                   </div>

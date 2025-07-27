@@ -1,4 +1,6 @@
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import type { Event as GameEvent } from "@/api/games"
+import React from "react"
 
 interface Player {
   id: string
@@ -35,6 +37,11 @@ interface HockeyRinkProps {
     penaltyLocation: boolean
   }
   shotCoordinates?: ShotCoordinate[]
+  goalCoordinates?: ShotCoordinate[]
+  activeEvents?: GameEvent[]
+  playerNumbers?: Record<string, number | null>
+  homeColor?: string
+  awayColor?: string
 }
 
 export function HockeyRink({
@@ -57,7 +64,18 @@ export function HockeyRink({
     penaltyLocation: false,
   },
   shotCoordinates = [],
+  goalCoordinates = [],
+  activeEvents = [],
+  playerNumbers = {},
+  homeColor,
+  awayColor,
 }: HockeyRinkProps) {
+  // Config via env
+  const RADIUS = Number(import.meta.env.VITE_PLAYER_NODE_RADIUS ?? 12)
+  const STROKE_W = Number(import.meta.env.VITE_PLAYER_NODE_STROKE_WIDTH ?? 2)
+  const STROKE = import.meta.env.VITE_PLAYER_NODE_STROKE_COLOR ?? "#000"
+  const FILL_HOME = homeColor ?? (import.meta.env.VITE_PLAYER_NODE_FILL_HOME ?? "#2563eb")
+  const FILL_AWAY = awayColor ?? (import.meta.env.VITE_PLAYER_NODE_FILL_AWAY ?? "#dc2626")
   // Standard NHL rink dimensions (scaled)
   const rinkWidth = width * 0.9
   const rinkHeight = height * 0.8
@@ -65,78 +83,35 @@ export function HockeyRink({
   const centerX = width / 2
   const centerY = height / 2
 
-  // Sample player data with dynamic positions
-  const players: Player[] = [
-    {
-      id: "1",
-      name: "A. Matthews",
-      number: 34,
-      position: "C",
-      team: "home",
-      x: centerX - 100 + Math.sin(currentTime / 100) * 20,
-      y: centerY - 30 + Math.cos(currentTime / 150) * 15,
-    },
-    {
-      id: "2",
-      name: "M. Marner",
-      number: 16,
-      position: "RW",
-      team: "home",
-      x: centerX - 80 + Math.cos(currentTime / 120) * 25,
-      y: centerY + 40 + Math.sin(currentTime / 180) * 10,
-    },
-    {
-      id: "3",
-      name: "W. Nylander",
-      number: 88,
-      position: "RW",
-      team: "home",
-      x: centerX - 150 + Math.sin(currentTime / 200) * 30,
-      y: centerY + Math.cos(currentTime / 100) * 20,
-    },
-    {
-      id: "4",
-      name: "D. Pastrnak",
-      number: 88,
-      position: "RW",
-      team: "away",
-      x: centerX + 100 + Math.cos(currentTime / 110) * 20,
-      y: centerY + 30 + Math.sin(currentTime / 140) * 15,
-    },
-    {
-      id: "5",
-      name: "B. Marchand",
-      number: 63,
-      position: "LW",
-      team: "away",
-      x: centerX + 80 + Math.sin(currentTime / 130) * 25,
-      y: centerY - 40 + Math.cos(currentTime / 170) * 10,
-    },
-    {
-      id: "6",
-      name: "C. McAvoy",
-      number: 73,
-      position: "D",
-      team: "away",
-      x: centerX + 150 + Math.cos(currentTime / 190) * 30,
-      y: centerY + Math.sin(currentTime / 90) * 20,
-    },
-  ]
+  // Build player markers from active events
+  interface Marker { name: string | null; x: number; y: number; team: string }
+  const markers: Marker[] = React.useMemo(() => {
+    const res: Marker[] = []
+    activeEvents.forEach((ev) => {
+      if (ev.x_coordinate != null && ev.y_coordinate != null) {
+        res.push({ name: ev.player ?? null, x: ev.x_coordinate, y: ev.y_coordinate, team: ev.team })
+      }
+      if (ev.x_coordinate_2 != null && ev.y_coordinate_2 != null && ev.player_2) {
+        res.push({ name: ev.player_2, x: ev.x_coordinate_2, y: ev.y_coordinate_2, team: ev.team })
+      }
+    })
+    return res
+  }, [activeEvents])
 
-  // Helper functions to map rink coordinates ([-100,100] x, [-42,42] y) to SVG space
-  const mapX = (x: number) => centerX + (x / 100) * (rinkWidth / 2)
-  const mapY = (y: number) => centerY - (y / 42) * (rinkHeight / 2)
+  // Helper functions to map rink coordinates from dataset (0-200 x, 0-85 y)
+  const mapX = (x: number) => (width - rinkWidth) / 2 + (x / 200) * rinkWidth
+  const mapY = (y: number) => (height - rinkHeight) / 2 + (1 - y / 85) * rinkHeight
 
   return (
     <TooltipProvider>
       <div className="relative">
         {/* Team Names */}
-        <div className="absolute top-2 left-4 z-10">
+        <div className="absolute bottom-2 left-4 z-10">
           <div className="bg-blue-600 text-white px-3 py-1 rounded-md text-sm font-medium">
             {selectedGame?.homeTeam || "Home Team"}
           </div>
         </div>
-        <div className="absolute top-2 right-4 z-10">
+        <div className="absolute bottom-2 right-4 z-10">
           <div className="bg-red-600 text-white px-3 py-1 rounded-md text-sm font-medium">
             {selectedGame?.awayTeam || "Away Team"}
           </div>
@@ -152,6 +127,10 @@ export function HockeyRink({
             <radialGradient id="shotGradient" cx="50%" cy="50%" r="50%">
               <stop offset="0%" stopColor="#f97316" stopOpacity="0.8" />
               <stop offset="100%" stopColor="#f97316" stopOpacity="0" />
+            </radialGradient>
+            <radialGradient id="goalGradient" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stopColor="#10b981" stopOpacity="0.8" />
+              <stop offset="100%" stopColor="#10b981" stopOpacity="0" />
             </radialGradient>
           </defs>
           {/* Ice surface */}
@@ -311,6 +290,40 @@ export function HockeyRink({
             </g>
           )}
 
+          {/* Players Markers based on active events */}
+          {markers.map((m, idx) => {
+            const jersey = playerNumbers[m.name?.toLowerCase() ?? ""] ?? playerNumbers[m.name ?? ""] ?? ""
+            return (
+              <Tooltip key={idx}>
+                <TooltipTrigger asChild>
+                  <g>
+                    <circle
+                      cx={mapX(m.x)}
+                      cy={mapY(m.y)}
+                      r={RADIUS}
+                      fill={m.team === selectedGame?.homeTeam ? FILL_HOME : FILL_AWAY}
+                      stroke={STROKE}
+                      strokeWidth={STROKE_W}
+                    />
+                    {showNumbers && jersey && (
+                      <text
+                        x={mapX(m.x)}
+                        y={mapY(m.y) + RADIUS / 3}
+                        textAnchor="middle"
+                        fill="white"
+                        fontSize={RADIUS}
+                        fontWeight="bold"
+                        pointerEvents="none"
+                      >
+                        {jersey}
+                      </text>
+                    )}
+                  </g>
+                </TooltipTrigger>
+                <TooltipContent>{m.name ?? "Unknown"}</TooltipContent>
+              </Tooltip>
+            )
+          })}
           {/* Visualization Overlays */}
           <g opacity={opacity / 100}>
             {/* Shot Density Heat Map (data-driven) */}
@@ -470,50 +483,19 @@ export function HockeyRink({
                 </text>
               </g>
             )}
+
+            {/* Goal Density Heat Map */}
+            {visualizations.goalDensity && goalCoordinates.length > 0 && (
+              <g>
+                {goalCoordinates.map((c, idx) => (
+                  <circle key={idx} cx={mapX(c.x)} cy={mapY(c.y)} r={18} fill="url(#goalGradient)" />
+                ))}
+              </g>
+            )}
           </g>
 
           {/* Player positions with hover tooltips */}
-          {players.map((player) => (
-              <Tooltip key={player.id}>
-                <TooltipTrigger asChild>
-                  <g className="cursor-pointer">
-                    <circle
-                      cx={player.x}
-                      cy={player.y}
-                      r="12"
-                      fill={player.team === "home" ? "#3b82f6" : "#dc2626"}
-                      stroke={player.team === "home" ? "#1e40af" : "#b91c1c"}
-                      strokeWidth="2"
-                      className="hover:stroke-4 transition-all"
-                    />
-                    {showNumbers && (
-                      <text
-                        x={player.x}
-                        y={player.y + 1}
-                        textAnchor="middle"
-                        fill="white"
-                        fontSize="10"
-                        fontWeight="bold"
-                        className="pointer-events-none"
-                      >
-                        {player.number}
-                      </text>
-                    )}
-                  </g>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <div className="text-sm">
-                    <div className="font-semibold">{player.name}</div>
-                    <div className="text-muted-foreground">
-                      #{player.number} - {player.position}
-                    </div>
-                    <div className="text-muted-foreground">
-                      {player.team === "home" ? selectedGame?.homeTeam : selectedGame?.awayTeam}
-                    </div>
-                  </div>
-                </TooltipContent>
-              </Tooltip>
-            ))}
+          {/* This section is now redundant as markers are handled by activeEvents */}
         </svg>
       </div>
     </TooltipProvider>

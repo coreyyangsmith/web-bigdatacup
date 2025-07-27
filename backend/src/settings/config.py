@@ -52,6 +52,7 @@ class Settings(BaseSettings):
         env_prefix="",
         case_sensitive=False,
         validate_default=True,
+        extra="allow",  # ignore unknown env vars such as VITE_* used by frontend
     )
 
 

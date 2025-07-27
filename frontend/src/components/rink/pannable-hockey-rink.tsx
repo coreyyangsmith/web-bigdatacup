@@ -21,10 +21,15 @@ interface PannableHockeyRinkProps {
     penaltyLocation: boolean
   }
   shotCoordinates?: { x: number; y: number }[]
+  goalCoordinates?: { x: number; y: number }[]
+  activeEvents?: import("@/api/games").Event[]
+  playerNumbers?: Record<string, number | null>
+  homeColor?: string
+  awayColor?: string
 }
 
 export const PannableHockeyRink = React.forwardRef<() => void, PannableHockeyRinkProps>(
-  ({ width = 900, height = 450, shotCoordinates = [], ...rinkProps }, ref) => {
+  ({ width = 900, height = 450, shotCoordinates = [], goalCoordinates = [], activeEvents = [], playerNumbers = {}, homeColor, awayColor, ...rinkProps }, ref) => {
     const containerRef = React.useRef<HTMLDivElement>(null)
     const [containerSize, setContainerSize] = React.useState<{ width: number; height: number }>({ width, height })
     const [transform, setTransform] = React.useState({ x: 0, y: 0, scale: 1 })
@@ -168,6 +173,11 @@ export const PannableHockeyRink = React.forwardRef<() => void, PannableHockeyRin
               width={Math.max(width, containerSize.width)}
               height={Math.max(height, containerSize.height)}
               shotCoordinates={shotCoordinates}
+              goalCoordinates={goalCoordinates}
+              activeEvents={activeEvents}
+              playerNumbers={playerNumbers}
+              homeColor={homeColor}
+              awayColor={awayColor}
               {...rinkProps}
             />
           </div>
