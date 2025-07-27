@@ -1,7 +1,7 @@
 from collections.abc import Callable
-from typing import Any, Union
+from typing import Any, Union, List
 
-from pydantic import AliasChoices, Field, ImportString, validator
+from pydantic import AliasChoices, Field, ImportString, field_validator
 from pydantic.networks import PostgresDsn, RedisDsn
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -23,6 +23,28 @@ class Settings(BaseSettings):
         alias="DATABASE_URL",  # so env alias works even when env_prefix is set
     )
 
+    # CORS settings - comma separated list of origins, defaults to local dev server
+    allowed_origins: list[str] = Field(
+        default_factory=lambda: [
+            "http://localhost:5173",
+            "http://127.0.0.1:5173",
+        ],
+        alias="ALLOWED_ORIGINS",
+    )
+
+    @field_validator("allowed_origins", mode="before")
+    @classmethod
+    def parse_cors_origins(cls, v: Any) -> list[str]:
+        """Ensure ``allowed_origins`` is always a list of strings.
+
+        Accepts a comma-separated string (e.g. from environment) or an existing
+        list and normalises it into a list of stripped origin strings.
+        """
+        if isinstance(v, str):
+            return [origin.strip() for origin in v.split(",") if origin.strip()]
+        if isinstance(v, (list, tuple)):
+            return [str(origin).strip() for origin in v if str(origin).strip()]
+        raise ValueError("allowed_origins must be a comma-separated string or a list of strings")
 
     # Set model configuration
     model_config = SettingsConfigDict(
