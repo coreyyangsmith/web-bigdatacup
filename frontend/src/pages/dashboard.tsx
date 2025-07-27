@@ -3,7 +3,7 @@
 import * as React from "react"
 import { GameSelection } from "../components/game-selection"
 import { AppSidebar } from "../components/app-sidebar"
-import { PannableHockeyRink } from "../components/pannable-hockey-rink"
+import { PannableHockeyRink } from "../components/rink/pannable-hockey-rink"
 import { GameTable } from "../components/game-table"
 
 import { fetchGameEvents } from "@/api/games"
@@ -28,6 +28,9 @@ export default function HockeyDashboard() {
   const [viewMode, setViewMode] = React.useState<"rink" | "table">("rink")
   const [currentTime, setCurrentTime] = React.useState(0)
   const [opacity, setOpacity] = React.useState(75)
+  const [showGrid, setShowGrid] = React.useState(true)
+  const [showZones, setShowZones] = React.useState(true)
+  const [showNumbers, setShowNumbers] = React.useState(true)
   const [events, setEvents] = React.useState<GameEvent[] | null>(null)
   const [loadingEvents, setLoadingEvents] = React.useState(false)
   const [eventsError, setEventsError] = React.useState<string | null>(null)
@@ -122,6 +125,12 @@ export default function HockeyDashboard() {
         onViewModeChange={setViewMode}
         opacity={opacity}
         onOpacityChange={setOpacity}
+        showGrid={showGrid}
+        onShowGridChange={setShowGrid}
+        showZones={showZones}
+        onShowZonesChange={setShowZones}
+        showNumbers={showNumbers}
+        onShowNumbersChange={setShowNumbers}
       />
       <SidebarInset>
         <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
@@ -206,8 +215,9 @@ export default function HockeyDashboard() {
                     <PannableHockeyRink
                       width={1000}
                       height={400}
-                      showGrid={true}
-                      showZones={true}
+                      showGrid={showGrid}
+                      showZones={showZones}
+                      showNumbers={showNumbers}
                       currentTime={currentTime}
                       opacity={opacity}
                       selectedGame={selectedGame}

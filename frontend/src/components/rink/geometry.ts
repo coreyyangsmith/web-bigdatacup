@@ -1,0 +1,10 @@
+export const RINK_L = 200;
+export const RINK_W = 85;
+export const CORNER_R = 28;
+export const GOAL_FROM_BOARD = 11;
+export const BLUE_FROM_BOARD = 75;          // 50 ft between blues
+export const CENTER_X = 100;
+export const CENTER_CIRCLE_R = 15;
+export const END_DOT_X = GOAL_FROM_BOARD + 22; // 33 ft from end boards
+export const END_DOT_Y_OFF = 20;
+export const NZ_DOT_FROM_BLUE = 5;

@@ -15,6 +15,7 @@ interface HockeyRinkProps {
   height?: number
   showGrid?: boolean
   showZones?: boolean
+  showNumbers?: boolean
   currentTime?: number
   opacity?: number
   selectedGame?: any
@@ -38,6 +39,7 @@ export function HockeyRink({
   currentTime = 0,
   opacity = 75,
   selectedGame,
+  showNumbers = true,
   visualizations = {
     shotDensity: false,
     goalDensity: true,
@@ -450,44 +452,46 @@ export function HockeyRink({
 
           {/* Player positions with hover tooltips */}
           {players.map((player) => (
-            <Tooltip key={player.id}>
-              <TooltipTrigger asChild>
-                <g className="cursor-pointer">
-                  <circle
-                    cx={player.x}
-                    cy={player.y}
-                    r="12"
-                    fill={player.team === "home" ? "#3b82f6" : "#dc2626"}
-                    stroke={player.team === "home" ? "#1e40af" : "#b91c1c"}
-                    strokeWidth="2"
-                    className="hover:stroke-4 transition-all"
-                  />
-                  <text
-                    x={player.x}
-                    y={player.y + 1}
-                    textAnchor="middle"
-                    fill="white"
-                    fontSize="10"
-                    fontWeight="bold"
-                    className="pointer-events-none"
-                  >
-                    {player.number}
-                  </text>
-                </g>
-              </TooltipTrigger>
-              <TooltipContent>
-                <div className="text-sm">
-                  <div className="font-semibold">{player.name}</div>
-                  <div className="text-muted-foreground">
-                    #{player.number} - {player.position}
+              <Tooltip key={player.id}>
+                <TooltipTrigger asChild>
+                  <g className="cursor-pointer">
+                    <circle
+                      cx={player.x}
+                      cy={player.y}
+                      r="12"
+                      fill={player.team === "home" ? "#3b82f6" : "#dc2626"}
+                      stroke={player.team === "home" ? "#1e40af" : "#b91c1c"}
+                      strokeWidth="2"
+                      className="hover:stroke-4 transition-all"
+                    />
+                    {showNumbers && (
+                      <text
+                        x={player.x}
+                        y={player.y + 1}
+                        textAnchor="middle"
+                        fill="white"
+                        fontSize="10"
+                        fontWeight="bold"
+                        className="pointer-events-none"
+                      >
+                        {player.number}
+                      </text>
+                    )}
+                  </g>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <div className="text-sm">
+                    <div className="font-semibold">{player.name}</div>
+                    <div className="text-muted-foreground">
+                      #{player.number} - {player.position}
+                    </div>
+                    <div className="text-muted-foreground">
+                      {player.team === "home" ? selectedGame?.homeTeam : selectedGame?.awayTeam}
+                    </div>
                   </div>
-                  <div className="text-muted-foreground">
-                    {player.team === "home" ? selectedGame?.homeTeam : selectedGame?.awayTeam}
-                  </div>
-                </div>
-              </TooltipContent>
-            </Tooltip>
-          ))}
+                </TooltipContent>
+              </Tooltip>
+            ))}
         </svg>
       </div>
     </TooltipProvider>

@@ -13,6 +13,9 @@ logger = logging.getLogger(__name__)
 from .database import Base, SessionLocal, engine
 from ..models import Event, Team, Player, Game
 
+# Path to jersey numbers CSV (must have columns Player,Number)
+PLAYER_INFO_CSV = Path(__file__).resolve().parents[2] / "data" / "womens_hockey_jeresey_number.csv"
+
 
 def reset_and_seed_db() -> None:
     """Drop existing tables, recreate them, and load data from CSV."""
@@ -71,11 +74,25 @@ def reset_and_seed_db() -> None:
     teams = [Team(name=name) for name in unique_team_names]
     logger.info("Prepared %d teams for bulk insert", len(teams))
 
-    # Unique players from player / player_2 columns
+    # Unique players with optional jersey numbers
     player_series = pd.concat([df["player"], df["player_2"]])
     unique_player_names = player_series.dropna().unique()
-    players = [Player(name=name) for name in unique_player_names]
-    logger.info("Prepared %d players for bulk insert", len(players))
+
+    number_lookup: dict[str, int] = {}
+    if PLAYER_INFO_CSV.exists():
+        try:
+            pi_df = pd.read_csv(PLAYER_INFO_CSV)
+            if {"Player", "Number"}.issubset(pi_df.columns):
+                number_lookup = {
+                    row.Player.strip(): int(row.Number)
+                    for row in pi_df.itertuples(index=False)
+                    if pd.notna(row.Number)
+                }
+        except Exception as exc:
+            logger.warning("Failed to read player_info.csv: %s", exc)
+
+    players = [Player(name=name, number=number_lookup.get(name)) for name in unique_player_names]
+    logger.info("Prepared %d players for bulk insert (with jersey numbers)", len(players))
 
     # Unique games based on date + teams
     unique_games_df = df[["game_date", "home_team", "away_team"]].drop_duplicates()

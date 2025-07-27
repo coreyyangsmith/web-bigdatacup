@@ -9,6 +9,7 @@ interface PannableHockeyRinkProps {
   currentTime?: number
   opacity?: number
   selectedGame?: any
+  showNumbers?: boolean
   visualizations?: {
     shotDensity: boolean
     goalDensity: boolean
@@ -162,7 +163,11 @@ export const PannableHockeyRink = React.forwardRef<() => void, PannableHockeyRin
               transition: isDragging ? "none" : "transform 0.1s ease-out",
             }}
           >
-            <HockeyRink width={Math.max(width, containerSize.width)} height={Math.max(height, containerSize.height)} {...rinkProps} />
+            <HockeyRink
+              width={Math.max(width, containerSize.width)}
+              height={Math.max(height, containerSize.height)}
+              {...rinkProps}
+            />
           </div>
         </div>
       </div>

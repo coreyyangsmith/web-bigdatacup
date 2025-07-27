@@ -64,6 +64,12 @@ interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
   onViewModeChange: (mode: "rink" | "table") => void
   opacity: number
   onOpacityChange: (opacity: number) => void
+  showGrid: boolean
+  onShowGridChange: (v: boolean) => void
+  showZones: boolean
+  onShowZonesChange: (v: boolean) => void
+  showNumbers: boolean
+  onShowNumbersChange: (v: boolean) => void
 }
 
 export function AppSidebar({
@@ -72,6 +78,12 @@ export function AppSidebar({
   onViewModeChange,
   opacity,
   onOpacityChange,
+  showGrid,
+  onShowGridChange,
+  showZones,
+  onShowZonesChange,
+  showNumbers,
+  onShowNumbersChange,
   // Settings callbacks reserved
   ...props
 }: AppSidebarProps) {
@@ -201,21 +213,21 @@ export function AppSidebar({
                   <Label htmlFor="show-grid" className="text-sm">
                     Show Grid
                   </Label>
-                  <Switch id="show-grid" defaultChecked />
+                  <Switch id="show-grid" checked={showGrid} onCheckedChange={onShowGridChange} />
                 </div>
 
                 <div className="flex items-center justify-between">
                   <Label htmlFor="show-zones" className="text-sm">
                     Zone Lines
                   </Label>
-                  <Switch id="show-zones" defaultChecked />
+                  <Switch id="show-zones" checked={showZones} onCheckedChange={onShowZonesChange} />
                 </div>
 
                 <div className="flex items-center justify-between">
                   <Label htmlFor="show-numbers" className="text-sm">
                     Player Numbers
                   </Label>
-                  <Switch id="show-numbers" defaultChecked />
+                  <Switch id="show-numbers" checked={showNumbers} onCheckedChange={onShowNumbersChange} />
                 </div>
               </div>
             </SidebarGroupContent>
