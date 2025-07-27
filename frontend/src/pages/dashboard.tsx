@@ -41,6 +41,7 @@ export default function HockeyDashboard() {
   const [eventsError, setEventsError] = React.useState<string | null>(null)
   const [shotCoords, setShotCoords] = React.useState<ShotCoordinate[] | null>(null)
   const [goalCoords, setGoalCoords] = React.useState<ShotCoordinate[] | null>(null)
+  const [selectedTeam, setSelectedTeam] = React.useState<string>("all")
   const [selectedPlayer, setSelectedPlayer] = React.useState<string>("all")
   const [eventTypeColors, setEventTypeColors] = React.useState<Record<string, string>>({})
   const [homeColor, setHomeColor] = React.useState<string>(import.meta.env.VITE_PLAYER_NODE_FILL_HOME ?? "#2563eb")
@@ -49,6 +50,81 @@ export default function HockeyDashboard() {
   const [gamePlayers, setGamePlayers] = React.useState<PlayerInfo[]>([])
   const [playerTeamMap, setPlayerTeamMap] = React.useState<Record<string, string>>({})
   const rinkRef = React.useRef<() => void>(null)
+
+  // Derived coordinates filtered by selected player
+  const normalize = (name: string | null | undefined) => name?.trim().toLowerCase() ?? ""
+
+  const filteredShotCoords = React.useMemo<ShotCoordinate[]>(() => {
+    if (!events) return []
+
+    // Player level filtering
+    if (selectedPlayer !== "all") {
+      return events
+        .filter(
+          (e) =>
+            e.event?.toLowerCase() === "shot" &&
+            (normalize(e.player) === selectedPlayer || normalize(e.player_2) === selectedPlayer) &&
+            e.x_coordinate !== null &&
+            e.y_coordinate !== null
+        )
+        .map((e) => ({ x: e.x_coordinate as number, y: e.y_coordinate as number }))
+    }
+
+    // Team level filtering
+    if (selectedTeam !== "all") {
+      return events
+        .filter(
+          (e) =>
+            e.event?.toLowerCase() === "shot" &&
+            e.team?.toLowerCase() === selectedTeam.toLowerCase() &&
+            e.x_coordinate !== null &&
+            e.y_coordinate !== null
+        )
+        .map((e) => ({ x: e.x_coordinate as number, y: e.y_coordinate as number }))
+    }
+
+    // No filters – return all precomputed shots if available else derive
+    if (shotCoords) return shotCoords
+
+    return events
+      .filter((e) => e.event?.toLowerCase() === "shot" && e.x_coordinate !== null && e.y_coordinate !== null)
+      .map((e) => ({ x: e.x_coordinate as number, y: e.y_coordinate as number }))
+  }, [shotCoords, events, selectedPlayer, selectedTeam])
+
+  const filteredGoalCoords = React.useMemo<ShotCoordinate[]>(() => {
+    if (!events) return []
+
+    if (selectedPlayer !== "all") {
+      return events
+        .filter(
+          (e) =>
+            e.event?.toLowerCase() === "goal" &&
+            (normalize(e.player) === selectedPlayer || normalize(e.player_2) === selectedPlayer) &&
+            e.x_coordinate !== null &&
+            e.y_coordinate !== null
+        )
+        .map((e) => ({ x: e.x_coordinate as number, y: e.y_coordinate as number }))
+    }
+
+    if (selectedTeam !== "all") {
+      return events
+        .filter(
+          (e) =>
+            e.event?.toLowerCase() === "goal" &&
+            e.team?.toLowerCase() === selectedTeam.toLowerCase() &&
+            e.x_coordinate !== null &&
+            e.y_coordinate !== null
+        )
+        .map((e) => ({ x: e.x_coordinate as number, y: e.y_coordinate as number }))
+    }
+
+    if (goalCoords) return goalCoords
+
+    return events
+      .filter((e) => e.event?.toLowerCase() === "goal" && e.x_coordinate !== null && e.y_coordinate !== null)
+      .map((e) => ({ x: e.x_coordinate as number, y: e.y_coordinate as number }))
+  }, [goalCoords, events, selectedPlayer, selectedTeam])
+
   const [visualizations, setVisualizations] = React.useState({
     shotDensity: true,
     goalDensity: true,
@@ -72,6 +148,43 @@ export default function HockeyDashboard() {
     return (ev.period - 1) * PERIOD_SECONDS + elapsed
   }
 
+  // ---------------- Derived Stats (shots, goals, etc.) -------------------
+  const playerStats = React.useMemo(() => {
+    if (!events) {
+      return { shots: 0, goals: 0, zoneEntries: 0, possession: 0 }
+    }
+
+    // Determine relevant events based on current filters
+    let relevantEvents: GameEvent[] = events
+
+    if (selectedPlayer !== "all") {
+      const normalizedPlayer = selectedPlayer.toLowerCase()
+      relevantEvents = events.filter((e) => e.player?.toLowerCase() === normalizedPlayer)
+    } else if (selectedTeam !== "all") {
+      relevantEvents = events.filter((e) => e.team?.toLowerCase() === selectedTeam.toLowerCase())
+    }
+
+    const shots = relevantEvents.filter((e) => e.event?.toLowerCase() === "shot").length
+    const goals = relevantEvents.filter((e) => e.event?.toLowerCase() === "goal").length
+    const zoneEntries = relevantEvents.filter((e) => e.event?.toLowerCase() === "zone entry").length
+
+    // Possession time: rough estimate – span between first and last event for the player
+    let possession = 0
+    if (selectedPlayer !== "all" && relevantEvents.length > 1) {
+      const times = relevantEvents.map(computeAbsoluteTime)
+      possession = Math.max(...times) - Math.min(...times)
+    }
+
+    return { shots, goals, zoneEntries, possession }
+  }, [events, selectedPlayer, selectedTeam])
+
+  // Helper to format seconds as MM:SS
+  const formatTime = (secs: number): string => {
+    const m = Math.floor(secs / 60)
+    const s = secs % 60
+    return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`
+  }
+
   const teamAbbr = React.useCallback((teamName: string | undefined | null): string => {
     if (!teamName) return "";
     const seg = teamName.split("-").pop()?.trim() ?? teamName;
@@ -84,9 +197,10 @@ export default function HockeyDashboard() {
     if (!events) return []
     return events.filter((ev) => {
       if (selectedPlayer !== "all" && ev.player?.toLowerCase() !== selectedPlayer.toLowerCase()) return false
+      if (selectedPlayer === "all" && selectedTeam !== "all" && ev.team?.toLowerCase() !== selectedTeam.toLowerCase()) return false
       return Math.abs(computeAbsoluteTime(ev) - currentTime) < 1
     })
-  }, [events, currentTime, selectedPlayer])
+  }, [events, currentTime, selectedPlayer, selectedTeam])
 
   const handleExportData = () => {
     try {
@@ -302,7 +416,7 @@ export default function HockeyDashboard() {
                   <CardHeader className="pb-2">
                     <CardDescription>Total Shots</CardDescription>
                     <CardTitle className="text-2xl">
-                      {events ? events.filter((e) => e.event?.toLowerCase() === "shot").length : "-"}
+                      {events ? playerStats.shots : "-"}
                     </CardTitle>
                   </CardHeader>
                 </Card>
@@ -310,14 +424,16 @@ export default function HockeyDashboard() {
                   <CardHeader className="pb-2">
                     <CardDescription>Goals</CardDescription>
                     <CardTitle className="text-2xl">
-                      {events ? events.filter((e) => e.event?.toLowerCase() === "goal").length : "-"}
+                      {events ? playerStats.goals : "-"}
                     </CardTitle>
                   </CardHeader>
                 </Card>
                 <Card>
                   <CardHeader className="pb-2">
                     <CardDescription>Possession Time</CardDescription>
-                    <CardTitle className="text-2xl">12:34</CardTitle>
+                    <CardTitle className="text-2xl">
+                      {selectedPlayer === "all" && selectedTeam === "all" ? "-" : formatTime(playerStats.possession)}
+                    </CardTitle>
                   </CardHeader>
                 </Card>
                 <Card>
@@ -338,25 +454,51 @@ export default function HockeyDashboard() {
                       </CardDescription>
                     </div>
 
-                    {/* Player Analysis Select */}
-                    <div className="flex items-center gap-2">
-                      <Label className="text-sm">Player:</Label>
-                      <Select value={selectedPlayer} onValueChange={setSelectedPlayer}>
-                        <SelectTrigger className="w-40 h-8">
-                          <SelectValue placeholder="All Players" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">All Players</SelectItem>
-                          <SelectSeparator />
-                          {gamePlayers.map((p) => (
-                            <SelectItem key={p.id} value={p.name.toLowerCase()}>
-                              {teamAbbr(playerTeamMap[p.name.toLowerCase()])} - {p.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
+                    {/* Team & Player Analysis Selects */}
+                    <div className="flex items-center gap-4">
+                      {/* Team Select */}
+                      <div className="flex items-center gap-2">
+                        <Label className="text-sm">Team:</Label>
+                        <Select
+                          value={selectedTeam}
+                          onValueChange={(val) => {
+                            setSelectedTeam(val)
+                            setSelectedPlayer("all") // reset player when team changes
+                          }}
+                        >
+                          <SelectTrigger className="w-48 h-8">
+                            <SelectValue placeholder="All Teams" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">All Teams</SelectItem>
+                            <SelectSeparator />
+                            <SelectItem value={selectedGame.homeTeam.toLowerCase()}>{selectedGame.homeTeam}</SelectItem>
+                            <SelectItem value={selectedGame.awayTeam.toLowerCase()}>{selectedGame.awayTeam}</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
 
+                      {/* Player Select */}
+                      <div className="flex items-center gap-2">
+                        <Label className="text-sm">Player:</Label>
+                        <Select value={selectedPlayer} onValueChange={setSelectedPlayer}>
+                          <SelectTrigger className="w-40 h-8">
+                            <SelectValue placeholder="All Players" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">All Players</SelectItem>
+                            <SelectSeparator />
+                            {gamePlayers
+                              .filter((p) => selectedTeam === "all" || playerTeamMap[p.name.toLowerCase()]?.toLowerCase() === selectedTeam.toLowerCase())
+                              .map((p) => (
+                                <SelectItem key={p.id} value={p.name.toLowerCase()}>
+                                  {teamAbbr(playerTeamMap[p.name.toLowerCase()])} - {p.name}
+                                </SelectItem>
+                              ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent className="flex-1 p-0 overflow-auto">
@@ -370,8 +512,8 @@ export default function HockeyDashboard() {
                       currentTime={currentTime}
                       opacity={opacity}
                       selectedGame={selectedGame}
-                      shotCoordinates={shotCoords ?? []}
-                      goalCoordinates={goalCoords ?? []}
+                      shotCoordinates={filteredShotCoords}
+                      goalCoordinates={filteredGoalCoords}
                       playerNumbers={playerNumbers}
                       homeColor={homeColor}
                       awayColor={awayColor}
@@ -387,6 +529,7 @@ export default function HockeyDashboard() {
                 <TimelineScrubber
                   events={events}
                   selectedPlayer={selectedPlayer}
+                  selectedTeam={selectedTeam}
                   eventTypeColors={eventTypeColors}
                   onTimeChange={setCurrentTime}
                 />

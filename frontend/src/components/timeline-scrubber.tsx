@@ -28,11 +28,12 @@ interface TimelineEvent {
 interface TimelineScrubberProps {
   events: GameEventApi[] | null
   selectedPlayer: string
+  selectedTeam: string
   eventTypeColors: Record<string, string>
   onTimeChange: (time: number) => void
 }
 
-export function TimelineScrubber({ events, selectedPlayer, eventTypeColors, onTimeChange }: TimelineScrubberProps) {
+export function TimelineScrubber({ events, selectedPlayer, selectedTeam, eventTypeColors, onTimeChange }: TimelineScrubberProps) {
   // Build timeline events from API data
   const timelineEvents: TimelineEvent[] = React.useMemo(() => {
     if (!events) return []
@@ -60,9 +61,14 @@ export function TimelineScrubber({ events, selectedPlayer, eventTypeColors, onTi
 
   // Apply player filter if not 'all'
   const filteredEvents = React.useMemo(() => {
-    if (selectedPlayer === "all") return timelineEvents
-    return timelineEvents.filter((ev) => (ev.player ?? "").toLowerCase() === selectedPlayer.toLowerCase())
-  }, [timelineEvents, selectedPlayer])
+    if (selectedPlayer !== "all") {
+      return timelineEvents.filter((ev) => (ev.player ?? "").toLowerCase() === selectedPlayer.toLowerCase())
+    }
+    if (selectedTeam !== "all") {
+      return timelineEvents.filter((ev) => (ev.team ?? "").toLowerCase() === selectedTeam.toLowerCase())
+    }
+    return timelineEvents
+  }, [timelineEvents, selectedPlayer, selectedTeam])
 
   const maxTime = React.useMemo(() => {
     if (filteredEvents.length === 0) return 60
