@@ -135,7 +135,7 @@ export function GameTable({ events, eventTypeColors }: Props) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col flex-1 min-h-0 overflow-hidden space-y-6">
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
@@ -164,7 +164,7 @@ export function GameTable({ events, eventTypeColors }: Props) {
         </Card>
       </div>
 
-      <Card className="flex flex-col h-[70vh]">{/* Set explicit height to allow internal scrolling */}
+      <Card className="flex flex-col flex-1 min-h-0 overflow-hidden">{/* Fill available space and allow internal scrolling */}
         {/* Sticky Header: title row with pagination, and filters row */}
         <CardHeader className="space-y-4 sticky top-0 bg-background z-10">
           {/* Title + Pagination Row */}
@@ -279,7 +279,7 @@ export function GameTable({ events, eventTypeColors }: Props) {
           </div>
         </CardHeader>
         {/* Scrollable table region */}
-        <CardContent className="overflow-auto flex-1">
+        <CardContent className="overflow-auto flex-1 min-h-0">
           <Table>
             <TableHeader>
               <TableRow>
