@@ -16,6 +16,9 @@ import {
   SelectValue,
   SelectContent,
   SelectItem,
+  SelectGroup,
+  SelectLabel,
+  SelectSeparator,
 } from "@/components/ui/select"
 
 import React from "react"
@@ -24,17 +27,31 @@ import { Button } from "@/components/ui/button"
 
 interface Props {
   events: Event[]
+  eventTypeColors: Record<string, string>
 }
 
-export function GameTable({ events }: Props) {
+export function GameTable({ events, eventTypeColors }: Props) {
   const [eventFilter, setEventFilter] = React.useState<string>("all")
   const [teamFilter, setTeamFilter] = React.useState<string>("all")
   const [playerFilter, setPlayerFilter] = React.useState<string>("all")
 
   const uniqueEvents = React.useMemo(() => {
-    const set = new Set(events.map((e) => e.event))
+    const set = new Set(events.map((e) => (e.event ?? "").toLowerCase()))
     return Array.from(set.values()).filter(Boolean)
   }, [events])
+
+  // Match timeline dropdown grouping
+  const EVENT_TYPE_GROUPS: { label: string; types: string[] }[] = [
+    { label: "Scoring Events", types: ["goal", "shot"] },
+    { label: "Possession Events", types: ["puck recovery", "takeaway", "zone entry"] },
+    { label: "Face-off Events", types: ["faceoff win"] },
+    { label: "Penalties", types: ["penalty taken"] },
+    { label: "General Play", types: ["play", "incomplete play"] },
+    { label: "Dump Events", types: ["dump in/out"] },
+  ]
+
+  const groupedTypesSet = new Set(EVENT_TYPE_GROUPS.flatMap((g) => g.types))
+  const otherEventTypes = uniqueEvents.filter((t) => !groupedTypesSet.has(t))
 
   const uniqueTeams = React.useMemo(() => {
     const set = new Set(events.map((e) => e.team))
@@ -49,16 +66,26 @@ export function GameTable({ events }: Props) {
 
   const filteredEvents = React.useMemo(() => {
     return events.filter((e) => {
-      if (eventFilter !== "all" && e.event !== eventFilter) return false
-      if (teamFilter !== "all" && e.team !== teamFilter) return false
-      if (playerFilter !== "all" && e.player !== playerFilter) return false
+      // Normalize for case-insensitive comparison
+      const evType = (e.event ?? "").toLowerCase()
+      const tm = e.team ?? ""
+      const pl = e.player ?? ""
+
+      if (eventFilter !== "all" && evType !== eventFilter) return false
+      if (teamFilter !== "all" && tm !== teamFilter) return false
+      if (playerFilter !== "all" && pl !== playerFilter) return false
       return true
     })
   }, [events, eventFilter, teamFilter, playerFilter])
 
   const totalGoals = filteredEvents.filter((e) => e.event?.toLowerCase() === "goal").length
   const totalShots = filteredEvents.filter((e) => e.event?.toLowerCase() === "shot").length
+  const totalPenalties = filteredEvents.filter((e) => {
+    const ev = e.event?.toLowerCase() ?? ""
+    return ev.includes("penalty")
+  }).length
 
+  const shotAccuracy = totalShots > 0 ? (totalGoals / totalShots) * 100 : 0
   // ---------------- Sorting -----------------
   type SortableKeys = "period" | "clock" | "team" | "player" | "event"
 
@@ -109,45 +136,70 @@ export function GameTable({ events }: Props) {
 
   return (
     <div className="space-y-6">
+      {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Total Goals</CardDescription>
-            <CardTitle className="text-2xl">{totalGoals}</CardTitle>
-          </CardHeader>
-        </Card>
         <Card>
           <CardHeader className="pb-2">
             <CardDescription>Total Shots</CardDescription>
             <CardTitle className="text-2xl">{totalShots}</CardTitle>
           </CardHeader>
         </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardDescription>Goals</CardDescription>
+            <CardTitle className="text-2xl">{totalGoals}</CardTitle>
+          </CardHeader>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardDescription>Shot Accuracy (%)</CardDescription>
+            <CardTitle className="text-2xl">{shotAccuracy.toFixed(1)}</CardTitle>
+          </CardHeader>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardDescription>Penalties</CardDescription>
+            <CardTitle className="text-2xl">{totalPenalties}</CardTitle>
+          </CardHeader>
+        </Card>
       </div>
 
-      <Card>
-        <CardHeader className="space-y-4">
-          <div>
-            <CardTitle>Play-by-Play Events</CardTitle>
-            <CardDescription>Filter by event type or team</CardDescription>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-4">
-            {/* Event filter */}
-            <div className="flex items-center gap-2">
-              <span className="text-sm">Event:</span>
-              <Select value={eventFilter} onValueChange={setEventFilter}>
-                <SelectTrigger size="sm" className="min-w-[120px]">
-                  <SelectValue placeholder="All" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All</SelectItem>
-                  {uniqueEvents.map((evt) => (
-                    <SelectItem key={evt} value={evt}>{evt}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+      <Card className="flex flex-col h-[70vh]">{/* Set explicit height to allow internal scrolling */}
+        {/* Sticky Header: title row with pagination, and filters row */}
+        <CardHeader className="space-y-4 sticky top-0 bg-background z-10">
+          {/* Title + Pagination Row */}
+          <div className="flex items-center justify-between w-full">
+            <div>
+              <CardTitle>Play-by-Play Events</CardTitle>
+              <CardDescription>Filter by event, team, or player</CardDescription>
             </div>
 
+            {/* Pagination Controls */}
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">
+                Page {page} of {totalPages}
+              </span>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page === 1}
+              >
+                Prev
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={page === totalPages}
+              >
+                Next
+              </Button>
+            </div>
+          </div>
+
+          {/* Filters Row */}
+          <div className="flex flex-wrap items-center gap-4">
             {/* Team filter */}
             <div className="flex items-center gap-2">
               <span className="text-sm">Team:</span>
@@ -164,26 +216,70 @@ export function GameTable({ events }: Props) {
               </Select>
             </div>
 
-            {/* Player filter (shown only when a team is selected) */}
-            {teamFilter !== "all" && (
-              <div className="flex items-center gap-2">
-                <span className="text-sm">Player:</span>
-                <Select value={playerFilter} onValueChange={setPlayerFilter}>
-                  <SelectTrigger size="sm" className="min-w-[140px]">
-                    <SelectValue placeholder="All" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All</SelectItem>
-                    {uniquePlayers.map((pl) => (
-                      <SelectItem key={pl} value={pl}>{pl}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
+            {/* Player filter (always visible) */}
+            <div className="flex items-center gap-2">
+              <span className="text-sm">Player:</span>
+              <Select value={playerFilter} onValueChange={setPlayerFilter}>
+                <SelectTrigger size="sm" className="min-w-[140px]">
+                  <SelectValue placeholder="All" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All</SelectItem>
+                  {uniquePlayers.map((pl) => (
+                    <SelectItem key={pl} value={pl}>{pl}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Event filter aligned right */}
+            <div className="ml-auto flex items-center gap-2">
+              <span className="text-sm">Event:</span>
+              <Select value={eventFilter} onValueChange={setEventFilter}>
+                <SelectTrigger size="sm" className="min-w-[160px]">
+                  <SelectValue placeholder="All Events" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Events</SelectItem>
+                  <SelectSeparator />
+                  {EVENT_TYPE_GROUPS.map((grp) => {
+                    const swatchColor = eventTypeColors[grp.types[0]] ?? "#6b7280"
+                    return (
+                      <SelectGroup key={grp.label}>
+                        <SelectLabel className="flex items-center gap-2">
+                          <span className="inline-block w-2 h-2 rounded-full" style={{ backgroundColor: swatchColor }} />
+                          {grp.label}
+                        </SelectLabel>
+                        {grp.types.map((t) => (
+                          <SelectItem key={t} value={t} className="pl-5">
+                            {t.charAt(0).toUpperCase() + t.slice(1)}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    )
+                  })}
+
+                  {/* Other events */}
+                  {otherEventTypes.length > 0 && (
+                    <>
+                      <SelectSeparator />
+                      <SelectGroup>
+                        <SelectLabel>Other Events</SelectLabel>
+                        {otherEventTypes.map((t) => (
+                          <SelectItem key={t} value={t} className="pl-5">
+                            {t.charAt(0).toUpperCase() + t.slice(1)}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    </>
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </CardHeader>
-        <CardContent className="overflow-auto max-h-[60vh]">
+        {/* Scrollable table region */}
+        <CardContent className="overflow-auto flex-1">
           <Table>
             <TableHeader>
               <TableRow>
@@ -212,36 +308,20 @@ export function GameTable({ events }: Props) {
                   <TableCell>{ev.clock}</TableCell>
                   <TableCell>{ev.team}</TableCell>
                   <TableCell>{ev.player}</TableCell>
-                  <TableCell>{ev.event}</TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-1">
+                      <span
+                        className="inline-block w-3 h-3 rounded-full"
+                        style={{ backgroundColor: eventTypeColors[(ev.event ?? "").toLowerCase()] ?? "#6b7280" }}
+                      />
+                      {ev.event}
+                    </div>
+                  </TableCell>
                   <TableCell>{ev.detail_1 ?? ""}</TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
-          {/* Pagination controls */}
-          <div className="flex justify-between items-center mt-4">
-            <span className="text-sm text-muted-foreground">
-              Page {page} of {totalPages} • {sortedEvents.length} events
-            </span>
-            <div className="flex gap-2">
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page === 1}
-              >
-                Previous
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                disabled={page === totalPages}
-              >
-                Next
-              </Button>
-            </div>
-          </div>
         </CardContent>
       </Card>
     </div>

@@ -30,6 +30,8 @@ import {
   SelectGroup,
   SelectLabel,
 } from "@/components/ui/select"
+// Added for Chat Interface
+import { ChatInterface } from "@/components/chat-interface"
 
 // Map every visualization to a unique key so the switches act independently
 const visualizationOptions = [
@@ -82,6 +84,7 @@ interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
     unsuccessfulPass: boolean
     eventHeatmap: boolean
     penaltyLocation: boolean
+    possessionChain: boolean
   }
   onVisualizationsChange: (v: {
     shotDensity: boolean
@@ -90,6 +93,7 @@ interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
     unsuccessfulPass: boolean
     eventHeatmap: boolean
     penaltyLocation: boolean
+    possessionChain: boolean
   }) => void
   homeColor?: string
   awayColor?: string
@@ -277,38 +281,8 @@ export function AppSidebar({
       )}
 
       {viewMode === "table" && (
-        <SidebarContent>
-          <SidebarGroup>
-            <SidebarGroupLabel>Table Filters</SidebarGroupLabel>
-            <SidebarGroupContent>
-              <div className="space-y-4 px-2">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="show-goals" className="text-sm">
-                    Goals
-                  </Label>
-                  <Switch id="show-goals" defaultChecked />
-                </div>
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="show-assists" className="text-sm">
-                    Assists
-                  </Label>
-                  <Switch id="show-assists" defaultChecked />
-                </div>
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="show-shots" className="text-sm">
-                    Shots
-                  </Label>
-                  <Switch id="show-shots" defaultChecked />
-                </div>
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="show-hits" className="text-sm">
-                    Hits
-                  </Label>
-                  <Switch id="show-hits" />
-                </div>
-              </div>
-            </SidebarGroupContent>
-          </SidebarGroup>
+        <SidebarContent className="flex flex-col h-full">
+          <ChatInterface />
         </SidebarContent>
       )}
     </Sidebar>

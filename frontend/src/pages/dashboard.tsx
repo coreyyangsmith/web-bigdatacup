@@ -530,7 +530,7 @@ export default function HockeyDashboard() {
             <>
               {loadingEvents && <p>Loading events…</p>}
               {eventsError && <p className="text-red-500">{eventsError}</p>}
-              {events && <GameTable events={events} />}
+              {events && <GameTable events={events} eventTypeColors={eventTypeColors} />}
             </>
           )}
         </div>
