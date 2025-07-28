@@ -1,19 +1,33 @@
 import * as React from "react"
 import { cn } from "@/lib/utils"
-import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { streamChat, type ChatMessage } from "@/api/chat";
+import { sendChat, type ChatMessage, type GameContext } from "@/api/chat";
+import { useState } from "react";
 
-export function ChatInterface() {
-  const [messages, setMessages] = React.useState<ChatMessage[]>([
+interface SelectedGame {
+  id: number;
+  homeTeam: string;
+  awayTeam: string;
+  date: string;
+}
+
+export function ChatInterface({ game }: { game: SelectedGame }) {
+  const [messages, setMessages] = useState<ChatMessage[]>([
     {
       role: "assistant",
       content: "Hello! I\'m your hockey analytics assistant. How can I help you today?",
     },
   ])
-  const [input, setInput] = React.useState("")
-  const [isLoading, setIsLoading] = React.useState(false)
+  const [input, setInput] = useState("")
+  const [isLoading, setIsLoading] = useState(false)
   const containerRef = React.useRef<HTMLDivElement>(null)
+  const textareaRef = React.useRef<HTMLTextAreaElement>(null)
+
+  const exampleQueries = [
+    "How many incomplete plays did each team have?",
+    "Which player has the most shots on goal?",
+    "List the distinct event types in the dataset.",
+  ] as const
 
   // Scroll to bottom whenever messages change
   React.useEffect(() => {
@@ -23,48 +37,48 @@ export function ChatInterface() {
     }
   }, [messages])
 
-  const handleSend = async (e: React.FormEvent) => {
-    e.preventDefault()
-    const trimmed = input.trim()
-    if (!trimmed || isLoading) return
+  // Resize textarea whenever input value changes
+  React.useEffect(() => {
+    const el = textareaRef.current
+    if (el) {
+      el.style.height = "auto"
+      el.style.height = `${el.scrollHeight}px`
+    }
+  }, [input])
 
-    const updatedMessages: ChatMessage[] = [
-      ...messages,
-      { role: "user", content: trimmed },
-    ]
-    setMessages(updatedMessages)
-    setInput("")
-    setIsLoading(true)
+  const handleSend = async () => {
+    if (input.trim() === "") return;
 
-    // Add placeholder assistant message to update in-place
-    setMessages((prev) => [...prev, { role: "assistant", content: "" }])
+    const userMessage: ChatMessage = { role: "user", content: input };
+    const newMessages = [...messages, userMessage];
+    setMessages(newMessages);
+    setInput("");
+    setIsLoading(true);
+
+    const gameCtx: GameContext = {
+      game_date: game.date.split("T")[0] ?? game.date,
+      home_team: game.homeTeam,
+      away_team: game.awayTeam,
+    };
 
     try {
-      await streamChat(updatedMessages, (chunk) => {
-        setMessages((prev) => {
-          const lastIndex = prev.length - 1
-          const last = prev[lastIndex]
-          if (last.role !== "assistant") return prev // safety
-          // Append chunk to last assistant message
-          const updated = { ...last, content: last.content + chunk }
-          const copy = [...prev]
-          copy[lastIndex] = updated
-          return copy
-        })
-      })
-    } catch (err) {
-      console.error(err)
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: "assistant",
-          content: "Sorry, I ran into an error. Please try again.",
-        },
-      ])
+      const assistantResponse = await sendChat(newMessages, gameCtx);
+      const assistantMessage: ChatMessage = {
+        role: "assistant",
+        content: assistantResponse,
+      };
+      setMessages([...newMessages, assistantMessage]);
+    } catch (error) {
+      console.error(error);
+      const errorMessage: ChatMessage = {
+        role: "assistant",
+        content: "Sorry, I'm having trouble connecting to the server.",
+      };
+      setMessages([...newMessages, errorMessage]);
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   return (
     <div className="flex flex-col h-full p-3">
@@ -75,7 +89,7 @@ export function ChatInterface() {
         <div className="h-px bg-border mt-2" />
       </div>
       {/* Messages */}
-      <div ref={containerRef} className="flex-1 overflow-y-auto space-y-2 px-1 pb-2 border border-border rounded-lg">
+      <div ref={containerRef} className="flex-1 min-h-0 overflow-y-auto space-y-2 px-1 pb-2 border border-border rounded-lg">
         <div className="flex flex-col space-y-2">
           {messages.map((m, idx) => (
             <div
@@ -98,13 +112,36 @@ export function ChatInterface() {
         </div>
       </div>
 
+      {/* Example queries */}
+      <div className="mt-3 mb-1 flex flex-wrap gap-2 text-xs">
+        {exampleQueries.map((q) => (
+          <button
+            key={q}
+            type="button"
+            className="px-2 py-1 rounded bg-muted hover:bg-muted/80 border border-border"
+            onClick={() => setInput(q)}
+          >
+            {q}
+          </button>
+        ))}
+      </div>
+
       {/* Input */}
       <form onSubmit={handleSend} className="flex gap-2 pt-1">
-        <Input
+        <textarea
           value={input}
-          onChange={(e) => setInput(e.target.value)}
+          ref={textareaRef}
+          onChange={(e) => {
+            setInput(e.target.value)
+            // Auto-resize as user types
+            const el = e.target as HTMLTextAreaElement
+            el.style.height = "auto"
+            el.style.height = `${el.scrollHeight}px`
+          }}
           placeholder="Type your message..."
-          className="flex-1"
+          rows={1}
+          className="flex-1 resize-none overflow-hidden rounded-md border border-input bg-transparent px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+          style={{}}
         />
         <Button type="submit" size="sm" disabled={isLoading}>
           {isLoading ? "..." : "Send"}

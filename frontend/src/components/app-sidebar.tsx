@@ -282,7 +282,7 @@ export function AppSidebar({
 
       {viewMode === "table" && (
         <SidebarContent className="flex flex-col h-full">
-          <ChatInterface />
+          <ChatInterface game={selectedGame} />
         </SidebarContent>
       )}
     </Sidebar>

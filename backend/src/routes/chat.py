@@ -1,53 +1,38 @@
-from fastapi import APIRouter, HTTPException
-from fastapi.responses import StreamingResponse
+from fastapi import APIRouter
+from pydantic import BaseModel, Field
+from typing import List, Optional
+from ..services.pandas_service import query_pandas_agent
 
-from ..schemas.chat import ChatRequest, ChatMessage
+router = APIRouter()
 
-# LangChain & OpenAI imports
-from langchain_openai import ChatOpenAI
-from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+class GameContext(BaseModel):
+    game_date: str = Field(..., description="Game date in YYYY-MM-DD format")
+    home_team: str
+    away_team: str
 
-import os
-from dotenv import load_dotenv
+class ChatMessage(BaseModel):
+    role: str
+    content: str
 
-# Load environment variables from .env file
-load_dotenv()
+class ChatInput(BaseModel):
+    messages: List[ChatMessage]
+    game: GameContext
 
-router = APIRouter(prefix="/chat", tags=["Chat"])
+@router.post("/chat")
+async def chat_with_pandas(chat_input: ChatInput):
+    """
+    Handles chat requests by forwarding the last user message to the pandas agent, scoped to the provided game context.
+    """
+    last_user_message = None
+    for message in reversed(chat_input.messages):
+        if message.role == 'user':
+            last_user_message = message.content
+            break
 
-# Instantiate the model once and reuse for subsequent requests
-chat_model = ChatOpenAI(
-    model=os.getenv("OPENAI_MODEL", "gpt-4.1-nano"),
-    temperature=0,
-    streaming=True,
-)
+    if not last_user_message:
+        return {"role": "assistant", "content": "No user message found."}
 
-def _to_lc_message(msg: ChatMessage):
-    """Convert pydantic ChatMessage -> LangChain message object."""
-    if msg.role == "user":
-        return HumanMessage(content=msg.content)
-    if msg.role == "assistant":
-        return AIMessage(content=msg.content)
-    # Defaults to system
-    return SystemMessage(content=msg.content)
+    game_ctx = chat_input.game.model_dump()
 
-
-@router.post("", response_model=None)
-async def chat_endpoint(payload: ChatRequest):
-    """Stream assistant response back to the client token-by-token."""
-
-    try:
-        message_history = [_to_lc_message(m) for m in payload.messages]
-        stream_iter = chat_model.stream(message_history)
-    except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc)) from exc
-
-    def token_generator():
-        for chunk in stream_iter:
-            if isinstance(chunk, AIMessage):
-                # LangChain returns incremental AIMessage chunks with .content containing new tokens
-                if chunk.content:
-                    yield chunk.content
-
-    # Return streaming plain-text response
-    return StreamingResponse(token_generator(), media_type="text/plain")
+    response = query_pandas_agent(last_user_message, game_ctx)
+    return {"role": "assistant", "content": response}

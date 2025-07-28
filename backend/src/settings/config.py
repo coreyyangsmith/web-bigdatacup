@@ -13,10 +13,16 @@ class Settings(BaseSettings):
     the class (e.g. in unit tests: ``Settings(debug=True)``).
     """
 
+
     # General application
     app_name: str = Field("Web BigDataCup API", alias="APP_NAME")
     debug: bool = Field(False, alias="DEBUG")
 
+    # Chtbot
+    OPENAI_API_KEY: str = Field(..., alias="OPENAI_API_KEY")
+    OPENAI_MODEL: str = Field("gpt-4.1-nano", alias="OPENAI_MODEL")
+
+    # Database
     database_url: Union[str, PostgresDsn] = Field(
         "sqlite:///./app.db",
         validation_alias=AliasChoices("DATABASE_URL", "DB_URL"),

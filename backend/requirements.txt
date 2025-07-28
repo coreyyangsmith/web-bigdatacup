@@ -8,3 +8,5 @@ pandas
 openai
 langchain 
 langchain-openai 
+langchain_experimental
+tabulate 
