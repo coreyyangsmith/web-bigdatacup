@@ -602,7 +602,7 @@ export function HockeyRink({
                     )}
                   </g>
                 </TooltipTrigger>
-                <TooltipContent>
+                <TooltipContent arrowColor={firstMarker.team === selectedGame?.homeTeam ? (homeColor ?? "#2563eb") : (awayColor ?? "#dc2626")}>
                   <div className="space-y-4 min-w-[220px] bg-zinc-800 p-2 rounded-md">
                     {Array.from(new Set(markers.map((m) => m.name ?? "Unknown"))).map((playerName, idx2) => {
                       const playerEvents = activeEvents.filter(

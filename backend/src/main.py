@@ -14,6 +14,7 @@ from .db import crud
 from .schemas.shot import ShotCoordinateSchema
 from .schemas.player import PlayerSchema
 from .models import Player
+from .routes.chat import router as chat_router
 
 # Initialise logging before anything else
 from .utils.logger import logger
@@ -37,6 +38,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(chat_router)
 
 
 @app.get("/", tags=["Root"])

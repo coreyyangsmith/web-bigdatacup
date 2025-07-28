@@ -5,3 +5,6 @@ pydantic
 python-dotenv 
 pydantic-settings 
 pandas 
+openai
+langchain 
+langchain-openai 
