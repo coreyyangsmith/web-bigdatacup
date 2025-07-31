@@ -1,5 +1,6 @@
 from fastapi import Depends, FastAPI, HTTPException, Response
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import select, distinct
 
@@ -209,7 +210,15 @@ async def export_game_data(game_id: int, db: Session = Depends(get_db)):
     game_data = GameSchema.model_validate(game_obj).model_dump()
     event_data = [EventSchema.model_validate(ev).model_dump() for ev in events_q]
 
-    return {"game": game_data, "events": event_data}
+    # Prepare JSON payload
+    payload = {"game": game_data, "events": event_data}
+
+    # Build a friendly filename: YYYY-MM-DD_Home_vs_Away.json
+    safe_home = game_data['home_team'].replace(' ', '_')
+    safe_away = game_data['away_team'].replace(' ', '_')
+    filename = f"{game_data['game_date']}_{safe_home}_vs_{safe_away}.json"
+
+    return JSONResponse(content=payload, headers={"Content-Disposition": f"attachment; filename=\"{filename}\""})
 
 
 @app.get("/events", response_model=list[EventSchema], tags=["Events"])

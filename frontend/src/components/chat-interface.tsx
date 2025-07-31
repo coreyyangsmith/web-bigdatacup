@@ -46,7 +46,8 @@ export function ChatInterface({ game }: { game: SelectedGame }) {
     }
   }, [input])
 
-  const handleSend = async () => {
+  const handleSend = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     if (input.trim() === "") return;
 
     const userMessage: ChatMessage = { role: "user", content: input };
