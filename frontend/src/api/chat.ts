@@ -22,7 +22,7 @@ export async function sendChat(messages: ChatMessage[], game: GameContext): Prom
 
   if (!res.ok) {
     const errorText = await res.text();
-    throw new Error(`Failed to get chat response: ${errorText}`);
+    throw new Error(`Failed to get chat response: ${errorText}. Please try again.`);
   }
 
   const data = (await res.json()) as { role: string; content: string };

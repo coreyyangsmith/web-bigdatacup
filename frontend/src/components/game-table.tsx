@@ -37,7 +37,7 @@ export function GameTable({ events, eventTypeColors }: Props) {
 
   const uniqueEvents = React.useMemo(() => {
     const set = new Set(events.map((e) => (e.event ?? "").toLowerCase()))
-    return Array.from(set.values()).filter(Boolean)
+    return Array.from(set.values()).filter(Boolean).sort((a, b) => a.localeCompare(b))
   }, [events])
 
   // Match timeline dropdown grouping
@@ -55,13 +55,13 @@ export function GameTable({ events, eventTypeColors }: Props) {
 
   const uniqueTeams = React.useMemo(() => {
     const set = new Set(events.map((e) => e.team))
-    return Array.from(set.values()).filter(Boolean)
+    return Array.from(set.values()).filter(Boolean).sort((a, b) => a.localeCompare(b))
   }, [events])
 
   const uniquePlayers = React.useMemo(() => {
     const relevant = teamFilter === "all" ? events : events.filter((e) => e.team === teamFilter)
     const set = new Set(relevant.map((e) => e.player))
-    return Array.from(set.values()).filter(Boolean)
+    return Array.from(set.values()).filter(Boolean).sort((a, b) => a.localeCompare(b))
   }, [events, teamFilter])
 
   const filteredEvents = React.useMemo(() => {

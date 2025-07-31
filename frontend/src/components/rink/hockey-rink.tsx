@@ -604,7 +604,7 @@ export function HockeyRink({
                 </TooltipTrigger>
                 <TooltipContent arrowColor={firstMarker.team === selectedGame?.homeTeam ? (homeColor ?? "#2563eb") : (awayColor ?? "#dc2626")}>
                   <div className="space-y-4 min-w-[220px] bg-zinc-800 p-2 rounded-md">
-                    {Array.from(new Set(markers.map((m) => m.name ?? "Unknown"))).map((playerName, idx2) => {
+                    {Array.from(new Set(markers.map((m) => m.name ?? "Unknown"))).sort((a, b) => a.localeCompare(b)).map((playerName, idx2) => {
                       const playerEvents = activeEvents.filter(
                         (ev) =>
                           ev.player?.toLowerCase() === playerName.toLowerCase() ||
