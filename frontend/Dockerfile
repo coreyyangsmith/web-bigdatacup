@@ -1,5 +1,6 @@
 # Development stage
-FROM node:18-alpine
+# Use debian-based Node image instead of Alpine to ensure rollup binary compatibility
+FROM node:22
 
 WORKDIR /app
 
