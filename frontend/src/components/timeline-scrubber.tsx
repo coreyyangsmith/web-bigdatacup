@@ -1,5 +1,5 @@
 import * as React from "react"
-import { Play, Pause, SkipBack, SkipForward, ChevronLeft, ChevronRight } from "lucide-react"
+import { Play, Pause, SkipBack, SkipForward, ChevronLeft, ChevronRight, ChevronDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Slider } from "@/components/ui/slider"
 import { Card, CardContent } from "@/components/ui/card"
@@ -249,58 +249,61 @@ export function TimelineScrubber({ events, selectedPlayer, selectedTeam, eventTy
           {/* Title */}
           <h3 className="text-lg font-semibold">Game Timeline</h3>
 
-          {/* Event Type Filter */}
-          <div className="flex items-center gap-2">
-            <span className="text-sm">Filter:</span>
-            <Select value={selectedEventType} onValueChange={setSelectedEventType}>
-              <SelectTrigger size="sm" className="min-w-[160px]">
-                <SelectValue placeholder="All events" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Events</SelectItem>
-                <SelectSeparator />
-                {EVENT_TYPE_GROUPS.map((grp: { label: string; types: string[] }) => {
-                  const swatchColor = eventTypeColors[grp.types[0]] ?? "#6b7280"
-                  return (
-                    <SelectGroup key={grp.label}>
-                      <SelectLabel className="flex items-center gap-2">
-                        <span
-                          className="inline-block w-2 h-2 rounded-full"
-                          style={{ backgroundColor: swatchColor }}
-                        />
-                        {grp.label}
-                      </SelectLabel>
-                      {grp.types.map((t: string) => (
-                        <SelectItem key={t} value={t} className="pl-5">
-                          {t.charAt(0).toUpperCase() + t.slice(1)}
-                        </SelectItem>
-                      ))}
-                    </SelectGroup>
-                  )
-                })}
-              </SelectContent>
-            </Select>
-          </div>
+          {/* Timeline Controls & Event Filter */}
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            {/* Timeline Controls */}
+            <div className="flex items-center gap-4">
+              <Button variant="outline" size="sm" onClick={() => handleTimeChange([0])}>
+                <SkipBack className="h-4 w-4" />
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => setIsPlaying(!isPlaying)} disabled={filteredEvents.length === 0}>
+                {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => handleTimeChange([maxTime])}>
+                <SkipForward className="h-4 w-4" />
+              </Button>
+              <div className="h-4 w-px bg-border mx-2" />
+              <Button variant="outline" size="sm" onClick={() => jumpToPreviousEvent()} disabled={!getPreviousEvent()}>
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => jumpToNextEvent()} disabled={!getNextEvent()}>
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+              <div className="text-sm font-mono">{formatTime(currentTime[0])}</div>
+            </div>
 
-          {/* Timeline Controls */}
-          <div className="flex items-center gap-4">
-            <Button variant="outline" size="sm" onClick={() => handleTimeChange([0])}>
-              <SkipBack className="h-4 w-4" />
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => setIsPlaying(!isPlaying)} disabled={filteredEvents.length === 0}>
-              {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => handleTimeChange([maxTime])}>
-              <SkipForward className="h-4 w-4" />
-            </Button>
-            <div className="h-4 w-px bg-border mx-2" />
-            <Button variant="outline" size="sm" onClick={() => jumpToPreviousEvent()} disabled={!getPreviousEvent()}>
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => jumpToNextEvent()} disabled={!getNextEvent()}>
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-            <div className="text-sm font-mono">{formatTime(currentTime[0])}</div>
+            {/* Event Type Filter */}
+            <div className="flex items-center gap-2">
+              <span className="text-sm">Filter:</span>
+              <Select value={selectedEventType} onValueChange={setSelectedEventType}>
+                <SelectTrigger size="sm" className="min-w-[160px]">
+                  <SelectValue placeholder="All events" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Events</SelectItem>
+                  <SelectSeparator />
+                  {EVENT_TYPE_GROUPS.map((grp: { label: string; types: string[] }) => {
+                    const swatchColor = eventTypeColors[grp.types[0]] ?? "#6b7280"
+                    return (
+                      <SelectGroup key={grp.label}>
+                        <SelectLabel className="flex items-center gap-2">
+                          <span
+                            className="inline-block w-2 h-2 rounded-full"
+                            style={{ backgroundColor: swatchColor }}
+                          />
+                          {grp.label}
+                        </SelectLabel>
+                        {grp.types.map((t: string) => (
+                          <SelectItem key={t} value={t} className="pl-5">
+                            {t.charAt(0).toUpperCase() + t.slice(1)}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    )
+                  })}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           {/* Timeline Slider with team labels */}
@@ -390,10 +393,17 @@ export function TimelineScrubber({ events, selectedPlayer, selectedTeam, eventTy
             </div> {/* end relative flex-1 */}
           </div>
 
-          {/* Event Details */}
-          <div className="flex flex-col gap-2 p-3 bg-muted rounded-lg min-h-[60px] mt-12">
-            {selectedEvents.length > 0 ? (
-              selectedEvents.map((ev) => (
+          {/* Event Details Accordion */}
+          <details className="bg-muted rounded-lg mt-12 group">
+            <summary className="list-none cursor-pointer flex items-center gap-2 p-3 select-none">
+              <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180 text-muted-foreground" />
+              <span className="font-medium">Event Details</span>
+              <span className="text-xs text-muted-foreground">({selectedEvents.length})</span>
+            </summary>
+
+            <div className={"flex flex-col gap-2 p-3 pt-0 " + (selectedEvents.length === 0 ? "min-h-[32px]" : "min-h-[60px]")}>
+              {selectedEvents.length > 0 ? (
+                selectedEvents.map((ev) => (
                 <div key={ev.id} className="space-y-1 border-b last:border-b-0 pb-2 last:pb-0">
                   {/* Primary line */}
                   <div className="flex flex-wrap items-center gap-2">
@@ -443,6 +453,7 @@ export function TimelineScrubber({ events, selectedPlayer, selectedTeam, eventTy
               <span className="text-sm text-muted-foreground">(No Event)</span>
             )}
           </div>
+          </details>
           {/* Event Legend */}
           <div className="mt-4">
             <h4 className="text-sm font-semibold mb-3">Event Legend</h4>

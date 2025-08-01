@@ -454,37 +454,45 @@ export default function HockeyDashboard() {
                 </Card>
               </div>
                 {/* Stats Cards */}
-                <div className="grid auto-rows-min gap-4 md:grid-cols-4">
+                <div className="grid auto-rows-min gap-4 grid-cols-2 md:grid-cols-4">
                   <Card>
-                    <CardHeader>
-                      <CardDescription>Total Shots</CardDescription>
-                      <CardTitle className="text-2xl">
-                        {events ? playerStats.shots : "-"}
-                      </CardTitle>
+                    <CardHeader className="pb-3">
+                      <div className="flex items-center justify-between">
+                        <CardDescription className="text-xs">Total Shots</CardDescription>
+                        <CardTitle className="text-xl">
+                          {events ? playerStats.shots : "-"}
+                        </CardTitle>
+                      </div>
                     </CardHeader>
                   </Card>
                   <Card>
-                    <CardHeader>
-                      <CardDescription>Goals</CardDescription>
-                      <CardTitle className="text-2xl">
-                        {events ? playerStats.goals : "-"}
-                      </CardTitle>
+                    <CardHeader className="pb-3">
+                      <div className="flex items-center justify-between">
+                        <CardDescription className="text-xs">Goals</CardDescription>
+                        <CardTitle className="text-xl">
+                          {events ? playerStats.goals : "-"}
+                        </CardTitle>
+                      </div>
                     </CardHeader>
                   </Card>
                   <Card>
-                    <CardHeader>
-                      <CardDescription>Shot Accuracy (%)</CardDescription>
-                      <CardTitle className="text-2xl">
-                        {events ? playerStats.shotAccuracy.toFixed(1) : "-"}
-                      </CardTitle>
+                    <CardHeader className="pb-3">
+                      <div className="flex items-center justify-between">
+                        <CardDescription className="text-xs">Shot Accuracy (%)</CardDescription>
+                        <CardTitle className="text-xl">
+                          {events ? playerStats.shotAccuracy.toFixed(1) : "-"}
+                        </CardTitle>
+                      </div>
                     </CardHeader>
                   </Card>
                   <Card>
-                    <CardHeader>
-                      <CardDescription>Penalties</CardDescription>
-                      <CardTitle className="text-2xl">
-                        {events ? playerStats.penalties : "-"}
-                      </CardTitle>
+                    <CardHeader className="pb-3">
+                      <div className="flex items-center justify-between">
+                        <CardDescription className="text-xs">Penalties</CardDescription>
+                        <CardTitle className="text-xl">
+                          {events ? playerStats.penalties : "-"}
+                        </CardTitle>
+                      </div>
                     </CardHeader>
                   </Card>
                 </div>
