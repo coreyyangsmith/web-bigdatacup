@@ -214,7 +214,7 @@ docker compose up
 ```
 
 ### Cloud Deployment
-I have deployed this application live using [Railway](https://railway.com/) as they provide a low-cost 'hobby-tier' for small applications. The link for the live application (up still up and running) can be found [here](https://web-bigdatacup-frontend-production.up.railway.app/).
+I have deployed this application live using [Railway](https://railway.com/) as they provide a low-cost 'hobby-tier' for small applications. The link for the live application (up still up and running) can be found [here](https://icelens-production.up.railway.app/).
 
 python -m data_analysis.eda
 python -m data_analysis.split_games
