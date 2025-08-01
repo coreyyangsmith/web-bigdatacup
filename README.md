@@ -128,9 +128,31 @@ Comparing Flask vs FastAPI, I have more experience with FastAPI and have chosen 
         * Scaling via containerization (Docker)
         * API integration with other hockey analysis tools
 ### Screens
+#### Landing Page
+![Landing](imgs/landing.png)
+
+#### Rink Visualization
+![Rink](imgs/rink.png)
+
+Event Details
+![Event_Details](imgs/event_details.png)
+
+Shot and Goal Density Heatmap
+![Shot_Density](imgs/shot_density.png)
+
+Plays and Incomplete Plays Visualization
+![Plays](imgs/plays.png)
+
+Penalty Locations and Overall Event Density
+![Event_Density](imgs/event_density.png)
+#### Table Visualization
+Table Data and PuckQuery Chatbot
+![Table](imgs/table.png)
 
 ### Video Walkthrough
-A video walkthrough of this application can be found at this [link]() or embedded below.
+A video walkthrough of this application can be found at this [link](https://www.youtube.com/watch?v=8DX7Ovqu6Js) or embedded below.
+
+[![Video Walkthrough](https://img.youtube.com/vi/8DX7Ovqu6Js/0.jpg)](https://www.youtube.com/watch?v=8DX7Ovqu6Js)
 
 ## Deployment
 The easiest way to deploy is via [Docker](#docker-deployment), if you have Docker or Docker Desktop installed, locally.
