@@ -1,4 +1,3 @@
-import './App.css'
 import HockeyDashboard from './pages/dashboard'
 import { ToastContainer } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'

@@ -62,28 +62,8 @@ export const PannableHockeyRink = React.forwardRef<() => void, PannableHockeyRin
       setIsDragging(false)
     }
 
-    const handleWheel = (e: React.WheelEvent) => {
-      e.preventDefault()
-
-      const rect = containerRef.current?.getBoundingClientRect()
-      if (!rect) return
-
-      const mouseX = e.clientX - rect.left
-      const mouseY = e.clientY - rect.top
-
-      const delta = e.deltaY > 0 ? 0.9 : 1.1
-      const newScale = Math.max(0.5, Math.min(3, transform.scale * delta))
-
-      // Calculate new position to zoom towards mouse cursor
-      const newX = mouseX - (mouseX - transform.x) * (newScale / transform.scale)
-      const newY = mouseY - (mouseY - transform.y) * (newScale / transform.scale)
-
-      setTransform({
-        x: newX,
-        y: newY,
-        scale: newScale,
-      })
-    }
+    // Wheel handler is registered with passive: false via useEffect below.
+    
 
     const resetView = () => {
       setTransform({ x: 0, y: 0, scale: 1 })
@@ -118,6 +98,34 @@ export const PannableHockeyRink = React.forwardRef<() => void, PannableHockeyRin
         document.removeEventListener("mouseup", handleGlobalMouseUp)
       }
     }, [isDragging, dragStart, lastTransform])
+
+    // Wheel zoom handler (non-passive to allow preventDefault)
+    React.useEffect(() => {
+      const container = containerRef.current
+      if (!container) return
+
+      const wheelHandler = (e: WheelEvent) => {
+        e.preventDefault()
+        const rect = container.getBoundingClientRect()
+        const mouseX = e.clientX - rect.left
+        const mouseY = e.clientY - rect.top
+
+        setTransform((prev) => {
+          const delta = e.deltaY > 0 ? 0.9 : 1.1
+          const newScale = Math.max(0.5, Math.min(3, prev.scale * delta))
+          const newX = mouseX - (mouseX - prev.x) * (newScale / prev.scale)
+          const newY = mouseY - (mouseY - prev.y) * (newScale / prev.scale)
+          return { x: newX, y: newY, scale: newScale }
+        })
+      }
+
+      // Attach non-passive wheel listener so we can call preventDefault
+      container.addEventListener("wheel", wheelHandler, { passive: false })
+
+      return () => {
+        container.removeEventListener("wheel", wheelHandler)
+      }
+    }, [])
 
     // Resize observer to fill available space
     React.useEffect(() => {
@@ -161,7 +169,6 @@ export const PannableHockeyRink = React.forwardRef<() => void, PannableHockeyRin
           onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}
-          onWheel={handleWheel}
           style={{ touchAction: "none" }}
         >
           <div

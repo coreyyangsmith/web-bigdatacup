@@ -1,107 +1,87 @@
+import { http } from "./http"
+
 export interface Game {
-  id: number;
-  game_date: string;
-  home_team: string;
-  away_team: string;
+  id: number
+  game_date: string
+  home_team: string
+  away_team: string
 }
 
-// Base URL for backend API – configurable via .env (Vite)
-// Prefer VITE_API_BASE_URL but fall back to legacy VITE_API_URL for backwards compatibility.
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL ??
-  import.meta.env.VITE_API_URL ??
-  "http://localhost:8000";
-
 export async function fetchGames(): Promise<Game[]> {
-  const res = await fetch(`${API_BASE_URL}/games`);
-  if (!res.ok) {
-    throw new Error("Failed to fetch games");
-  }
-  return res.json();
+  const { data } = await http.get<Game[]>("/games")
+  return data
 }
 
 export interface Event {
-  id: number;
-  game_date: string;
-  home_team: string;
-  away_team: string;
-  period: number;
-  clock: string;
-  home_team_skaters: number;
-  away_team_skaters: number;
-  team: string;
-  player: string;
-  event: string;
-  detail_1?: string | null;
-  detail_2?: string | null;
-  detail_3?: string | null;
-  detail_4?: string | null;
-  x_coordinate?: number | null;
-  y_coordinate?: number | null;
-  player_2?: string | null;
-  x_coordinate_2?: number | null;
-  y_coordinate_2?: number | null;
+  id: number
+  game_date: string
+  home_team: string
+  away_team: string
+  period: number
+  clock: string
+  home_team_skaters: number
+  away_team_skaters: number
+  team: string
+  player: string
+  event: string
+  detail_1?: string | null
+  detail_2?: string | null
+  detail_3?: string | null
+  detail_4?: string | null
+  x_coordinate?: number | null
+  y_coordinate?: number | null
+  player_2?: string | null
+  x_coordinate_2?: number | null
+  y_coordinate_2?: number | null
 }
 
 export async function fetchGameEvents(gameId: number): Promise<Event[]> {
-  const res = await fetch(`${API_BASE_URL}/games/${gameId}/events`);
-  if (!res.ok) {
-    throw new Error("Failed to fetch game events");
-  }
-  return res.json();
+  const { data } = await http.get<Event[]>(`/games/${gameId}/events`)
+  return data
 }
 
 export interface ShotCoordinate {
-  x: number;
-  y: number;
+  x: number
+  y: number
 }
 
 export async function fetchGameShotDensity(gameId: number): Promise<ShotCoordinate[]> {
-  const res = await fetch(`${API_BASE_URL}/games/${gameId}/shot-density`);
-  if (!res.ok) {
-    throw new Error("Failed to fetch shot density");
-  }
-  return res.json();
+  const { data } = await http.get<ShotCoordinate[]>(`/games/${gameId}/shot-density`)
+  return data
 }
 
 export async function fetchGameGoalDensity(gameId: number): Promise<ShotCoordinate[]> {
-  const res = await fetch(`${API_BASE_URL}/games/${gameId}/goal-density`)
-  if (!res.ok) {
-    throw new Error("Failed to fetch goal density")
-  }
-  return res.json()
+  const { data } = await http.get<ShotCoordinate[]>(`/games/${gameId}/goal-density`)
+  return data
 }
 
 export async function fetchEventTypes(): Promise<string[]> {
-  const res = await fetch(`${API_BASE_URL}/events/types`);
-  if (!res.ok) {
-    throw new Error("Failed to fetch event types");
-  }
-  return res.json();
+  const { data } = await http.get<string[]>("/events/types")
+  return data
 }
 
-export interface PlayerInfo { id: number; name: string; number?: number | null; }
+export interface PlayerInfo {
+  id: number
+  name: string
+  number?: number | null
+}
 
 export async function fetchPlayers(): Promise<PlayerInfo[]> {
-  const res = await fetch(`${API_BASE_URL}/players`);
-  if (!res.ok) throw new Error("Failed to fetch players");
-  return res.json();
+  const { data } = await http.get<PlayerInfo[]>("/players")
+  return data
 }
 
 export interface GameExport {
   game: {
-    id: number;
-    game_date: string;
-    home_team: string;
-    away_team: string;
-  };
-  events: Event[];
+    id: number
+    game_date: string
+    home_team: string
+    away_team: string
+  }
+  events: Event[]
 }
 
 export async function exportGameData(gameId: number): Promise<GameExport> {
-  const res = await fetch(`${API_BASE_URL}/games/${gameId}/export`)
-  if (!res.ok) {
-    throw new Error("Failed to export game data")
-  }
-  return res.json()
-} 
+  const { data } = await http.get<GameExport>(`/games/${gameId}/export`)
+  return data
+}

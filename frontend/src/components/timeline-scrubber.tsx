@@ -168,14 +168,6 @@ export function TimelineScrubber({ events, selectedPlayer, selectedTeam, eventTy
   const [selectedEvents, setSelectedEvents] = React.useState<TimelineEvent[]>([])
   const [selectedEvent, setSelectedEvent] = React.useState<TimelineEvent | null>(null) // first of selectedEvents for backward compatibility
 
-  // Debug: print selected event data
-  React.useEffect(() => {
-    if (selectedEvent) {
-      // eslint-disable-next-line no-console
-      console.log("Selected Event:", selectedEvent)
-    }
-  }, [selectedEvent])
-
   const formatTime = (seconds: number) => {
     const PERIOD_SECONDS = 20 * 60
     const period = Math.floor(seconds / PERIOD_SECONDS) + 1

@@ -1,33 +1,33 @@
+import { http } from "./http"
+
 export interface ChatMessage {
-  role: "user" | "assistant" | "system";
-  content: string;
+  role: "user" | "assistant" | "system"
+  content: string
 }
 
 export interface GameContext {
-  game_date: string;
-  home_team: string;
-  away_team: string;
+  game_date: string
+  home_team: string
+  away_team: string
 }
 
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL ??
-  import.meta.env.VITE_API_URL ??
-  "http://localhost:8000";
+export async function sendChat(
+  messages: ChatMessage[],
+  game: GameContext,
+): Promise<string> {
+  try {
+    const { data } = await http.post<{ role: string; content: string }>(
+      "/chat",
+      {
+        messages,
+        game,
+      },
+    )
 
-export async function sendChat(messages: ChatMessage[], game: GameContext): Promise<string> {
-  const res = await fetch(`${API_BASE_URL}/chat`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ messages, game }),
-  });
-
-  if (!res.ok) {
-    const errorText = await res.text();
-    throw new Error(`Failed to get chat response: ${errorText}. Please try again.`);
+    return data.content
+  } catch (error: any) {
+    const errorText =
+      error?.response?.data ?? error?.message ?? "Failed to get chat response. Please try again."
+    throw new Error(errorText)
   }
-
-  const data = (await res.json()) as { role: string; content: string };
-  return data.content;
-} 
+}
