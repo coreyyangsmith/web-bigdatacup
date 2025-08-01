@@ -1,5 +1,5 @@
 import * as React from "react"
-import { Play, Pause, SkipBack, SkipForward, ChevronLeft, ChevronRight, ChevronDown } from "lucide-react"
+import { Play, Pause, SkipBack, SkipForward, ChevronLeft, ChevronRight, ChevronDown, Info } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Slider } from "@/components/ui/slider"
 import { Card, CardContent } from "@/components/ui/card"
@@ -14,6 +14,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
 import type { Event as GameEventApi } from "@/api/games"
 
@@ -248,11 +250,10 @@ export function TimelineScrubber({ events, selectedPlayer, selectedTeam, eventTy
         <div className="space-y-4">
           {/* Title */}
           <h3 className="text-lg font-semibold">Game Timeline</h3>
-
           {/* Timeline Controls & Event Filter */}
-          <div className="flex items-center justify-between gap-4 flex-wrap">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
             {/* Timeline Controls */}
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
               <Button variant="outline" size="sm" onClick={() => handleTimeChange([0])}>
                 <SkipBack className="h-4 w-4" />
               </Button>
@@ -303,6 +304,79 @@ export function TimelineScrubber({ events, selectedPlayer, selectedTeam, eventTy
                   })}
                 </SelectContent>
               </Select>
+
+              {/* Legend Tooltip */}
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button className="flex items-center gap-1 ml-2 text-sm text-muted-foreground hover:text-foreground">
+                      <Info className="h-4 w-4" />
+                      Legend
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" align="end" className="bg-zinc-900 text-white p-3 rounded-md shadow-xl border border-border max-w-xs">
+                    <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs">
+                      {/* Scoring Events */}
+                      {["goal", "shot"].filter(type => eventTypeColors[type]).map(type => (
+                        <div key={type} className="flex items-center gap-1">
+                          <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: eventTypeColors[type] }} />
+                          <span>{type.charAt(0).toUpperCase() + type.slice(1)}</span>
+                        </div>
+                      ))}
+
+                      {/* Possession Events */}
+                      {["puck recovery", "takeaway", "zone entry"].filter(type => eventTypeColors[type]).map(type => (
+                        <div key={type} className="flex items-center gap-1">
+                          <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: eventTypeColors[type] }} />
+                          <span>{type.charAt(0).toUpperCase() + type.slice(1)}</span>
+                        </div>
+                      ))}
+
+                      {/* Face-off Events */}
+                      {["faceoff win"].filter(type => eventTypeColors[type]).map(type => (
+                        <div key={type} className="flex items-center gap-1">
+                          <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: eventTypeColors[type] }} />
+                          <span>{type.charAt(0).toUpperCase() + type.slice(1)}</span>
+                        </div>
+                      ))}
+
+                      {/* Penalties */}
+                      {["penalty taken"].filter(type => eventTypeColors[type]).map(type => (
+                        <div key={type} className="flex items-center gap-1">
+                          <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: eventTypeColors[type] }} />
+                          <span>{type.charAt(0).toUpperCase() + type.slice(1)}</span>
+                        </div>
+                      ))}
+
+                      {/* General Play Events */}
+                      {["play", "incomplete play"].filter(type => eventTypeColors[type]).map(type => (
+                        <div key={type} className="flex items-center gap-1">
+                          <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: eventTypeColors[type] }} />
+                          <span>{type.charAt(0).toUpperCase() + type.slice(1)}</span>
+                        </div>
+                      ))}
+
+                      {/* Dump Events */}
+                      {["dump in/out"].filter(type => eventTypeColors[type]).map(type => (
+                        <div key={type} className="flex items-center gap-1">
+                          <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: eventTypeColors[type] }} />
+                          <span>{type.charAt(0).toUpperCase() + type.slice(1)}</span>
+                        </div>
+                      ))}
+
+                      {/* Other Events */}
+                      {Object.entries(eventTypeColors).filter(([type]) =>
+                        !["goal", "shot", "puck recovery", "takeaway", "zone entry", "faceoff win", "penalty taken", "play", "incomplete play", "dump in/out"].includes(type)
+                      ).map(([type, color]) => (
+                        <div key={type} className="flex items-center gap-1">
+                          <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: color }} />
+                          <span>{type.charAt(0).toUpperCase() + type.slice(1)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </div>
           </div>
 
@@ -362,6 +436,7 @@ export function TimelineScrubber({ events, selectedPlayer, selectedTeam, eventTy
 
 
             {/* Event Markers (stacked rows by team) */}
+            <TooltipProvider>
             <div className="absolute top-2 left-0 w-full h-18 pointer-events-none">
               {/* Divider between team rows */}
               <div
@@ -372,29 +447,43 @@ export function TimelineScrubber({ events, selectedPlayer, selectedTeam, eventTy
                 const isHome = event.team?.toLowerCase() === (homeTeamName ?? "").toLowerCase()
                 const rowOffset = isHome ? 20 : 0 // px for row separation
                 return (
-                  <div
-                    key={event.id}
-                    className="absolute w-2 h-4 cursor-pointer pointer-events-auto"
-                    style={{
-                      left: `calc(${(event.time / maxTime) * 100}% - 4px)`,
-                      top: `${rowOffset}px`,
-                    }}
-                    onClick={() => jumpToEvent(event)}
-                  >
-                    <div
-                      className="w-2 h-4 rounded-sm"
-                      style={{ backgroundColor: eventTypeColors[event.type] ?? "#6b7280" }}
-                    />
-                  </div>
+                  <Tooltip key={event.id}>
+                    <TooltipTrigger asChild>
+                      <div
+                        className="absolute w-2 h-4 cursor-pointer pointer-events-auto"
+                        style={{
+                          left: `calc(${(event.time / maxTime) * 100}% - 4px)`,
+                          top: `${rowOffset}px`,
+                        }}
+                        onClick={() => jumpToEvent(event)}
+                      >
+                        <div
+                          className="w-2 h-4 rounded-sm"
+                          style={{ backgroundColor: eventTypeColors[event.type] ?? "#6b7280" }}
+                        />
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="bg-zinc-900 text-white p-2 rounded-md text-xs shadow-md border">
+                      <div className="space-y-1">
+                        <div className="font-medium">{event.type.toUpperCase()} – {formatTime(event.time)}</div>
+                        {event.description && <div>{event.description}</div>}
+                        {(event.player || event.player_2) && (
+                          <div className="text-white/80">
+                            {[event.player, event.player_2].filter(Boolean).join(", ")}
+                          </div>
+                        )}
+                      </div>
+                    </TooltipContent>
+                  </Tooltip>
                 )
               })}
             </div>
-
-            </div> {/* end relative flex-1 */}
+            </TooltipProvider>
+            </div>
           </div>
 
           {/* Event Details Accordion */}
-          <details className="bg-muted rounded-lg mt-12 group">
+          <details className="bg-muted rounded-lg mt-4 group">
             <summary className="list-none cursor-pointer flex items-center gap-2 p-3 select-none">
               <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180 text-muted-foreground" />
               <span className="font-medium">Event Details</span>
@@ -455,7 +544,7 @@ export function TimelineScrubber({ events, selectedPlayer, selectedTeam, eventTy
           </div>
           </details>
           {/* Event Legend */}
-          <div className="mt-4">
+          <div className="hidden">
             <h4 className="text-sm font-semibold mb-3">Event Legend</h4>
             <div className="flex flex-wrap gap-x-6 gap-y-3 text-xs">
               {/* Scoring Events */}

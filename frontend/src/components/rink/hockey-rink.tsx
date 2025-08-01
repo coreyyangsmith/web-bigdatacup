@@ -91,9 +91,6 @@ export function HockeyRink({
   const ftToPxY = rinkHeight / 85
   const SCALE = Math.min(ftToPxX, ftToPxY)
 
-  React.useEffect(() => {
-    console.log(activeEvents)
-  }, [activeEvents])
   // Geometry helpers (in pixels)
   const cornerRadius = 28 * SCALE
   const centerCircleRadius = 15 * SCALE
@@ -144,6 +141,11 @@ export function HockeyRink({
   const normalize = (s: string | null | undefined) => s?.trim().toLowerCase() ?? ""
 
   const passArrows = React.useMemo(() => {
+    // Always include passes that belong to the currently active events so the
+    // user can see the arrow for the play that is being highlighted even when
+    // pass visualisations are turned off.
+    const activeIds = new Set(activeEvents.map((e) => e.id))
+
     return events.filter((ev) => {
       if (
         ev.x_coordinate == null ||
@@ -156,6 +158,9 @@ export function HockeyRink({
       const evType = ev.event?.toLowerCase() ?? ""
       if (evType !== "play" && evType !== "incomplete play") return false
 
+      // If the event is part of the active events, keep it regardless of team / player filter.
+      if (activeIds.has(ev.id)) return true
+
       // Player filter takes precedence
       if (selectedPlayer !== "all") {
         const pNorm = normalize(selectedPlayer)
@@ -166,7 +171,24 @@ export function HockeyRink({
 
       return true
     })
-  }, [events, selectedPlayer, selectedTeam])
+  }, [events, activeEvents, selectedPlayer, selectedTeam])
+
+  // Determine whether pass arrows should be rendered: either the user enabled
+  // them explicitly or the current active event is a pass.
+  const hasActivePass = React.useMemo(
+    () =>
+      activeEvents.some(
+        (ev) =>
+          ev.x_coordinate != null &&
+          ev.y_coordinate != null &&
+          ev.x_coordinate_2 != null &&
+          ev.y_coordinate_2 != null &&
+          ["play", "incomplete play"].includes((ev.event ?? "").toLowerCase()),
+      ),
+    [activeEvents],
+  )
+  const shouldRenderPassArrows =
+    visualizations.successfulPass || visualizations.unsuccessfulPass || hasActivePass
 
   // Helper functions to map rink coordinates from dataset (0-200 x, 0-85 y)
   const mapX = (x: number) => rinkLeft + (x / 200) * rinkWidth
@@ -674,14 +696,22 @@ export function HockeyRink({
             )}
 
             {/* Successful / Unsuccessful Passes - dynamic arrows */}
-            {(visualizations.successfulPass || visualizations.unsuccessfulPass) && passArrows.length > 0 && (
+            {shouldRenderPassArrows && passArrows.length > 0 && (
               <g>
                 {passArrows.map((ev, idx) => {
                   const evType = ev.event?.toLowerCase() ?? ""
                   const isSuccessful = evType === "play"
                   const isUnsuccessful = evType === "incomplete play"
+                  const isActive = activeEvents.some((a) => a.id === ev.id)
 
-                  if ((isSuccessful && !visualizations.successfulPass) || (isUnsuccessful && !visualizations.unsuccessfulPass)) {
+                  // Skip rendering unless:
+                  //   • the user has enabled the corresponding visualisation, OR
+                  //   • this pass belongs to the currently active events.
+                  if (
+                    !isActive &&
+                    ((isSuccessful && !visualizations.successfulPass) ||
+                      (isUnsuccessful && !visualizations.unsuccessfulPass))
+                  ) {
                     return null
                   }
 
@@ -763,7 +793,6 @@ export function HockeyRink({
           </g>
 
           {/* Player positions with hover tooltips */}
-          {/* This section is now redundant as markers are handled by activeEvents */}
         </svg>
       </div>
     </TooltipProvider>

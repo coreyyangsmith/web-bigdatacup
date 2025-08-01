@@ -1,5 +1,3 @@
-"use client"
-
 import * as React from "react"
 import { GameSelection } from "../components/game-selection"
 import { AppSidebar } from "../components/app-sidebar"
@@ -20,13 +18,12 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { ArrowLeft, Download, FullscreenIcon as FullScreen, ZoomIn, ZoomOut } from "lucide-react"
+import { Card,  CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { ArrowLeft, Download } from "lucide-react"
 import { toast } from "react-toastify"
 import { getEventTypeColorMap } from "@/themes/event-colors"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectSeparator, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Input } from "@/components/ui/input"
 
 export default function HockeyDashboard() {
   const [selectedGame, setSelectedGame] = React.useState<any>(null)
@@ -126,8 +123,8 @@ export default function HockeyDashboard() {
   }, [goalCoords, events, selectedPlayer, selectedTeam])
 
   const [visualizations, setVisualizations] = React.useState({
-    shotDensity: true,
-    goalDensity: true,
+    shotDensity: false,
+    goalDensity: false,
     successfulPass: false,
     unsuccessfulPass: false,
     eventHeatmap: false,
@@ -456,7 +453,7 @@ export default function HockeyDashboard() {
                 {/* Stats Cards */}
                 <div className="grid auto-rows-min gap-4 grid-cols-2 md:grid-cols-4">
                   <Card>
-                    <CardHeader className="pb-3">
+                    <CardHeader className="">
                       <div className="flex items-center justify-between">
                         <CardDescription className="text-xs">Total Shots</CardDescription>
                         <CardTitle className="text-xl">
@@ -466,7 +463,7 @@ export default function HockeyDashboard() {
                     </CardHeader>
                   </Card>
                   <Card>
-                    <CardHeader className="pb-3">
+                    <CardHeader className="">
                       <div className="flex items-center justify-between">
                         <CardDescription className="text-xs">Goals</CardDescription>
                         <CardTitle className="text-xl">
@@ -476,7 +473,7 @@ export default function HockeyDashboard() {
                     </CardHeader>
                   </Card>
                   <Card>
-                    <CardHeader className="pb-3">
+                    <CardHeader className="">
                       <div className="flex items-center justify-between">
                         <CardDescription className="text-xs">Shot Accuracy (%)</CardDescription>
                         <CardTitle className="text-xl">
@@ -486,7 +483,7 @@ export default function HockeyDashboard() {
                     </CardHeader>
                   </Card>
                   <Card>
-                    <CardHeader className="pb-3">
+                    <CardHeader className="">
                       <div className="flex items-center justify-between">
                         <CardDescription className="text-xs">Penalties</CardDescription>
                         <CardTitle className="text-xl">

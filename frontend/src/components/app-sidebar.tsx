@@ -1,5 +1,5 @@
 import type * as React from "react"
-import { BarChart3, Eye, Layers, Target, Users, Table, RatIcon as Rink, Settings, Goal, type LucideIcon } from "lucide-react"
+import { BarChart3, Eye, Layers, Target, Users, Table, Settings, Goal, type LucideIcon } from "lucide-react"
 
 import {
   Sidebar,
@@ -20,17 +20,6 @@ import { Label } from "@/components/ui/label"
 import { Slider } from "@/components/ui/slider"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  SelectSeparator,
-  SelectGroup,
-  SelectLabel,
-} from "@/components/ui/select"
-// Added for Chat Interface
 import { ChatInterface } from "@/components/chat-interface"
 
 // Map every visualization to a unique key so the switches act independently
