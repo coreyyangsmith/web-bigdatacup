@@ -7,7 +7,7 @@ import { defineConfig } from "vite"
 export default defineConfig({
   server: {
     host: true,
-    allowedHosts: ["web-bigdatacup-frontend-production.up.railway.app"]
+    allowedHosts: ["icelens-production.up.railway.app"]
   },
   plugins: [react(), tailwindcss()],
   resolve: {
