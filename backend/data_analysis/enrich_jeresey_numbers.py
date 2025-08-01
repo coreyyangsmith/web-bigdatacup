@@ -1,6 +1,10 @@
 import pandas as pd
 import os
 
+"""
+Enrich jersey numbers with dates from the Olympic women's dataset.
+"""
+
 def enrich_jersey_numbers_with_dates():
     """
     Read women's hockey jersey numbers and enrich with dates from Olympic women's dataset

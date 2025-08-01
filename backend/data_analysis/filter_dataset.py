@@ -1,6 +1,10 @@
 import pandas as pd
 from pathlib import Path
 
+"""
+Filter the dataset to include only the games between Finland and the United States.
+"""
+
 # Use Path to construct the correct path relative to this script
 csv_path = Path(__file__).resolve().parent.parent / "data" / "olympic_womens_dataset_trimmed.csv"
 

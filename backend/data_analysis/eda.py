@@ -1,3 +1,10 @@
+"""
+Exploratory Data Analysis for Olympic Women's Hockey Dataset.
+
+Performs basic EDA including data summaries, unique value analysis, 
+and exports results to CSV files in the eda/ directory.
+"""
+
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt

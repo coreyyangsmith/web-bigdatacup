@@ -7,5 +7,4 @@ class ShotCoordinateSchema(BaseModel):
     x: int
     y: int
 
-    # Allow ORM objects / named tuples
     model_config = ConfigDict(from_attributes=True) 

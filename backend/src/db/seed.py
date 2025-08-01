@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pandas as pd
 from sqlalchemy.orm import Session
+import random
 
 import logging
 
@@ -15,10 +16,6 @@ from ..models import Event, Team, Player, Game
 
 # Path to jersey numbers CSV (must have columns Player,Number). Typo fixed and fallbacks supported.
 PLAYER_INFO_CSV = Path(__file__).resolve().parents[2] / "data" / "womens_hockey_jersey_numbers.csv"
-
-import random
-
-# Ensure deterministic random assignment per run (optional)
 random.seed(42)
 
 
@@ -33,10 +30,9 @@ def reset_and_seed_db() -> None:
 
     # Load CSV
     csv_path = Path(__file__).resolve().parents[2] / "data" / "olympic_womens_dataset.csv"
+    logger.info("Loading CSV data from %s", csv_path)
     if not csv_path.exists():
         raise FileNotFoundError(f"Dataset file not found at {csv_path}")
-
-    logger.info("Loading CSV data from %s", csv_path)
     df = pd.read_csv(csv_path)
 
     # Rename columns to snake_case to match model fields

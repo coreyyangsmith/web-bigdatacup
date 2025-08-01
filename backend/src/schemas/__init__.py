@@ -1,70 +1,26 @@
-from typing import Optional
+"""Package exports for schema modules.
 
-from pydantic import BaseModel, Field, ConfigDict
+This file now only re-exports individual schema classes from their dedicated
+modules.  Each model (Team, Player, Game, Event, etc.) lives in its own file
+for clarity.
+"""
 
-from .team import TeamSchema
-from .player import PlayerSchema
-from .game import GameSchema
+from .team import TeamSchema  # noqa: F401
+from .player import PlayerSchema  # noqa: F401
+from .game import GameSchema  # noqa: F401
+from .event import (
+    EventSchema,
+    EventBase,
+    EventCreate,
+    EventUpdate,
+)  # noqa: F401
 
-
-class EventSchema(BaseModel):
-    id: int
-    game_date: str = Field(..., alias="game_date")
-    home_team: str
-    away_team: str
-    period: int
-    clock: str
-    home_team_skaters: int
-    away_team_skaters: int
-    home_team_goals: int
-    away_team_goals: int
-    team: str
-    player: str
-    event: str
-    x_coordinate: Optional[int] = None
-    y_coordinate: Optional[int] = None
-    detail_1: Optional[str] = None
-    detail_2: Optional[str] = None
-    detail_3: Optional[str] = None
-    detail_4: Optional[str] = None
-    player_2: Optional[str] = None
-    x_coordinate_2: Optional[int] = None
-    y_coordinate_2: Optional[int] = None
-
-    model_config = ConfigDict(from_attributes=True)
-
-
-class EventBase(BaseModel):
-    game_date: str
-    home_team: str
-    away_team: str
-    period: int
-    clock: str
-    home_team_skaters: int
-    away_team_skaters: int
-    home_team_goals: int
-    away_team_goals: int
-    team: str
-    player: str
-    event: str
-    x_coordinate: Optional[int] = None
-    y_coordinate: Optional[int] = None
-    detail_1: Optional[str] = None
-    detail_2: Optional[str] = None
-    detail_3: Optional[str] = None
-    detail_4: Optional[str] = None
-    player_2: Optional[str] = None
-    x_coordinate_2: Optional[int] = None
-    y_coordinate_2: Optional[int] = None
-
-
-class EventCreate(EventBase):
-    pass
-
-
-class EventUpdate(EventBase):
-    pass
-
-__all__ = ["EventSchema"]
-__all__.extend(["EventBase", "EventCreate", "EventUpdate"])
-__all__.extend(["TeamSchema", "PlayerSchema", "GameSchema"])
+__all__ = [
+    "TeamSchema",
+    "PlayerSchema",
+    "GameSchema",
+    "EventSchema",
+    "EventBase",
+    "EventCreate",
+    "EventUpdate",
+]

@@ -2,6 +2,10 @@ import sys
 from pathlib import Path
 import pandas as pd
 
+"""
+Extract player information from the dataset and enrich with jersey numbers.
+"""
+
 DATA_DIR = Path(__file__).resolve().parents[1] / "data"
 DATASET_CSV = DATA_DIR / "olympic_womens_dataset.csv"
 JERSEY_CSV = DATA_DIR / "womens_hockey_jersey_numbers.csv"

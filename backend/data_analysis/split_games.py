@@ -1,6 +1,10 @@
 import pandas as pd
 import os
 
+"""
+Split the dataset into individual game files.
+"""
+
 def split_games():
     # Read the dataset
     df = pd.read_csv('data/olympic_womens_dataset.csv')

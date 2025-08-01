@@ -12,37 +12,28 @@ from fastapi import FastAPI
 
 from ..utils.logger import logger
 from ..db.seed import reset_and_seed_db
-from ..ml.xg_model import get_model
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Async context manager for application lifespan events."""
+    """Lifespan context manager to run startup & shutdown hooks.
+
+    FastAPI will call this once when the application starts and once when it
+    shuts down.  Any code executed *before* the ``yield`` runs on startup; any
+    code executed *after* the ``yield`` runs on shutdown.
+    """
+
     # ------------------------------------------------------------------
-    # Startup tasks
-    # ------------------------------------------------------------------
-    
-    # ------------------------------------------------------------------
-    # 1. Database reset/seed
+    # Startup – reset & seed database
     # ------------------------------------------------------------------
     logger.info("[Startup] Resetting & seeding database …")
     reset_and_seed_db()
     logger.info("[Startup] Database ready.")
 
-    # ------------------------------------------------------------------
-    # 2. ML model training / loading
-    # ------------------------------------------------------------------
-    try:
-        logger.info("[Startup] Initialising Expected Goals model …")
-        get_model()
-        logger.info("[Startup] Expected Goals model ready.")
-    except Exception as exc:
-        logger.exception("Failed to train/load Expected Goals model: %s", exc)
-        # Service can still start; endpoints depending on the model will handle 
-    
+    # Let the application run
     yield
-    
+
     # ------------------------------------------------------------------
-    # Shutdown tasks (cleanup if needed)
+    # Shutdown – perform cleanup if necessary
     # ------------------------------------------------------------------
     logger.info("[Shutdown] Application shutting down.")
