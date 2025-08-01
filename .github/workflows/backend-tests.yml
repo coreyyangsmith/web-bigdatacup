@@ -1,0 +1,47 @@
+# GitHub Actions workflow to run the backend test-suite on every push / PR
+#
+# The tests use Pytest and live under ``backend/tests``.
+# A minimal OPENAI_API_KEY environment variable is provided so that the
+# application's Settings model validates.  No external calls are made.
+
+name: Backend Tests
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/**'
+  pull_request:
+    paths:
+      - 'backend/**'
+      - '.github/workflows/**'
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.11']
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt
+
+      - name: Run backend tests
+        env:
+          PYTHONPATH: ./backend
+          OPENAI_API_KEY: test-key
+        run: |
+          pytest -q backend/tests
