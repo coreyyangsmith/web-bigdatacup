@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     Values can be overridden via environment variables or when instantiating
     the class (e.g. in unit tests: ``Settings(debug=True)``).
     """
+
     # General application
     app_name: str = Field("Web BigDataCup API", alias="APP_NAME")
     debug: bool = Field(False, alias="DEBUG")
@@ -47,7 +48,9 @@ class Settings(BaseSettings):
             return [origin.strip() for origin in v.split(",") if origin.strip()]
         if isinstance(v, (list, tuple)):
             return [str(origin).strip() for origin in v if str(origin).strip()]
-        raise ValueError("allowed_origins must be a comma-separated string or a list of strings")
+        raise ValueError(
+            "allowed_origins must be a comma-separated string or a list of strings"
+        )
 
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -58,6 +61,4 @@ class Settings(BaseSettings):
     )
 
 
-
-
-settings = Settings() 
+settings = Settings()

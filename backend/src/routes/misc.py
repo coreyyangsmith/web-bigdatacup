@@ -27,15 +27,6 @@ async def say_hello(name: str):
     return {"message": f"Hello, {name}!"}
 
 
-@router.get("/items/{item_id}", tags=["Example"])
-async def read_item(item_id: int, db: Session = Depends(get_db)):
-    """Example endpoint showing dependency injection of DB session.
-
-    Currently returns a stubbed response and does not interact with any tables.
-    """
-    return {"item_id": item_id, "note": "This is a stub. No database interaction yet."}
-
-
 @router.get("/api/test", tags=["Health"])
 async def api_test():
     """Simple endpoint for frontend connectivity testing."""

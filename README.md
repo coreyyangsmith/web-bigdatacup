@@ -11,29 +11,29 @@ As this project is designed for submission to evaluate programming skill, creati
 Before undergoing any coding, the first step is to decide on an interesting, useful, and engaging visualization to pursue. As such, I perform exploratory data analysis (EDA) on the dataset to better understand the characteristics of the data. I first analyze the [Data Dictionary](#data-dictionary), perform EDA on each column and the entire dataset to better understand the data, and decide on which data points are necessary to create my desired visualization.
 
 ### Data Dictionary
-| Column Name           | Data Type | Description                                                                 |
-|-----------------------|-----------|-----------------------------------------------------------------------------|
-| `game_date`           | Date      | Date of the game in YYYY-MM-DD format (e.g., '2020-12-23').               |
-| `Home Team`           | String    | Name of the home team (e.g., 'Toronto Maple Leafs').                      |
-| `Away Team`           | String    | Name of the away team (e.g., 'Boston Bruins').                            |
-| `Period`              | Integer   | Period number (1-3 for regulation, 4+ for overtime periods).               |
-| `Clock`               | String    | Time remaining in the period in MM:SS format (e.g., '19:34').              |
-| `Home Team Skaters`   | Integer   | Number of skaters on ice for home team (range: 3-6 players).               |
-| `Away Team Skaters`   | Integer   | Number of skaters on ice for away team (range: 3-6 players).               |
-| `Home Team Goals`     | Integer   | Goals scored by home team at time of event.                                |
-| `Away Team Goals`     | Integer   | Goals scored by away team at time of event.                                |
-| `Team`                | String    | Name of team responsible for the event.                                    |
-| `Player`              | String    | Name of primary player involved (shooter, passer, etc.).                   |
-| `Event`               | String    | Event type: Shot, Goal, Play, Incomplete Play, Takeaway, Puck Recovery, Dump In/Out, Zone Entry, Faceoff Win, Penalty Taken. |
-| `X Coordinate`        | Integer   | X-coordinate of event location on ice (0-200), from eventing team's perspective. |
-| `Y Coordinate`        | Integer   | Y-coordinate of event location on ice (0-85), from eventing team's perspective. |
-| `Detail 1`            | String    | Primary event detail: Shot type (Deflection, Fan, Slapshot, Snapshot, Wrap Around, Wristshot), Pass type (Direct, Indirect), Entry type (Carried, Dumped, Played), Possession outcome (Retained, Lost), or Penalty type. |
-| `Detail 2`            | String    | Secondary detail: Shot destination (On Net, Missed, Blocked) for shots/goals. |
-| `Detail 3`            | String    | Tertiary detail: Traffic indicator (true/false) for shots/goals.           |
-| `Detail 4`            | String    | Additional detail: One timer indicator (true/false) for shots/goals.       |
-| `Player 2`            | String    | Secondary player: Pass target, faceoff opponent, penalty drawer, targeted defender. |
-| `X Coordinate 2`      | Integer   | Secondary X-coordinate: Pass target location, varies by event type.        |
-| `Y Coordinate 2`      | Integer   | Secondary Y-coordinate: Pass target location, varies by event type.        |
+| Column Name         | Data Type | Description                                                                                                                                                                                                              |
+| ------------------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `game_date`         | Date      | Date of the game in YYYY-MM-DD format (e.g., '2020-12-23').                                                                                                                                                              |
+| `Home Team`         | String    | Name of the home team (e.g., 'Toronto Maple Leafs').                                                                                                                                                                     |
+| `Away Team`         | String    | Name of the away team (e.g., 'Boston Bruins').                                                                                                                                                                           |
+| `Period`            | Integer   | Period number (1-3 for regulation, 4+ for overtime periods).                                                                                                                                                             |
+| `Clock`             | String    | Time remaining in the period in MM:SS format (e.g., '19:34').                                                                                                                                                            |
+| `Home Team Skaters` | Integer   | Number of skaters on ice for home team (range: 3-6 players).                                                                                                                                                             |
+| `Away Team Skaters` | Integer   | Number of skaters on ice for away team (range: 3-6 players).                                                                                                                                                             |
+| `Home Team Goals`   | Integer   | Goals scored by home team at time of event.                                                                                                                                                                              |
+| `Away Team Goals`   | Integer   | Goals scored by away team at time of event.                                                                                                                                                                              |
+| `Team`              | String    | Name of team responsible for the event.                                                                                                                                                                                  |
+| `Player`            | String    | Name of primary player involved (shooter, passer, etc.).                                                                                                                                                                 |
+| `Event`             | String    | Event type: Shot, Goal, Play, Incomplete Play, Takeaway, Puck Recovery, Dump In/Out, Zone Entry, Faceoff Win, Penalty Taken.                                                                                             |
+| `X Coordinate`      | Integer   | X-coordinate of event location on ice (0-200), from eventing team's perspective.                                                                                                                                         |
+| `Y Coordinate`      | Integer   | Y-coordinate of event location on ice (0-85), from eventing team's perspective.                                                                                                                                          |
+| `Detail 1`          | String    | Primary event detail: Shot type (Deflection, Fan, Slapshot, Snapshot, Wrap Around, Wristshot), Pass type (Direct, Indirect), Entry type (Carried, Dumped, Played), Possession outcome (Retained, Lost), or Penalty type. |
+| `Detail 2`          | String    | Secondary detail: Shot destination (On Net, Missed, Blocked) for shots/goals.                                                                                                                                            |
+| `Detail 3`          | String    | Tertiary detail: Traffic indicator (true/false) for shots/goals.                                                                                                                                                         |
+| `Detail 4`          | String    | Additional detail: One timer indicator (true/false) for shots/goals.                                                                                                                                                     |
+| `Player 2`          | String    | Secondary player: Pass target, faceoff opponent, penalty drawer, targeted defender.                                                                                                                                      |
+| `X Coordinate 2`    | Integer   | Secondary X-coordinate: Pass target location, varies by event type.                                                                                                                                                      |
+| `Y Coordinate 2`    | Integer   | Secondary Y-coordinate: Pass target location, varies by event type.                                                                                                                                                      |
 
 In addition to `olympic_womens_dataset.csv` included in the repository (`backend/data/olympic_womens_dataset.csv`) as provided by the organizer, there is tracking data provided in the BigDataCup GitHub repository; however, the data provided in `TrackingData` is for a different dataset. Future extension of this application could implement player location tracking throughout the entire game; however, due to the nature of our limited dataset, we only have the ability to include location information a per-event basis.
 
@@ -215,6 +215,3 @@ docker compose up
 
 ### Cloud Deployment
 I have deployed this application live using [Railway](https://railway.com/) as they provide a low-cost 'hobby-tier' for small applications. The link for the live application (up still up and running) can be found [here](https://icelens-production.up.railway.app/).
-
-python -m data_analysis.eda
-python -m data_analysis.split_games

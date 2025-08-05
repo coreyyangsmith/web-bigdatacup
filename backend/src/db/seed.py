@@ -1,21 +1,23 @@
 """Utility to reset (drop & recreate) the DB and seed it with the Olympic Women's dataset."""
 
-from pathlib import Path
-
-import pandas as pd
-from sqlalchemy.orm import Session
 import random
-
 import logging
+import pandas as pd
 
-# Get module-level logger
-logger = logging.getLogger(__name__)
+from pathlib import Path
+from sqlalchemy.orm import Session
 
 from .database import Base, SessionLocal, engine
 from ..models import Event, Team, Player, Game
 
+# Get module-level logger
+logger = logging.getLogger(__name__)
+
+
 # Path to jersey numbers CSV (must have columns Player,Number). Typo fixed and fallbacks supported.
-PLAYER_INFO_CSV = Path(__file__).resolve().parents[2] / "data" / "womens_hockey_jersey_numbers.csv"
+PLAYER_INFO_CSV = (
+    Path(__file__).resolve().parents[2] / "data" / "womens_hockey_jersey_numbers.csv"
+)
 random.seed(42)
 
 
@@ -29,7 +31,9 @@ def reset_and_seed_db() -> None:
     Base.metadata.create_all(bind=engine)
 
     # Load CSV
-    csv_path = Path(__file__).resolve().parents[2] / "data" / "olympic_womens_dataset.csv"
+    csv_path = (
+        Path(__file__).resolve().parents[2] / "data" / "olympic_womens_dataset.csv"
+    )
     logger.info("Loading CSV data from %s", csv_path)
     if not csv_path.exists():
         raise FileNotFoundError(f"Dataset file not found at {csv_path}")
@@ -103,10 +107,7 @@ def reset_and_seed_db() -> None:
     # -----------------------------
     player_series = pd.concat([df["player"], df["player_2"]])
     # Remove null/None then strip whitespace
-    cleaned_names = (
-        player_series.dropna()
-        .map(lambda x: str(x).strip())
-    )
+    cleaned_names = player_series.dropna().map(lambda x: str(x).strip())
     # Remove empty strings
     cleaned_names = cleaned_names[cleaned_names != ""]
 
@@ -151,7 +152,9 @@ def reset_and_seed_db() -> None:
         )
         for name in unique_player_names
     ]
-    logger.info("Prepared %d players for bulk insert (with jersey numbers)", len(players))
+    logger.info(
+        "Prepared %d players for bulk insert (with jersey numbers)", len(players)
+    )
 
     # Unique games based on date + teams
     unique_games_df = df[["game_date", "home_team", "away_team"]].drop_duplicates()
@@ -176,4 +179,4 @@ def reset_and_seed_db() -> None:
         session.commit()
         logger.info("Database seeding complete")
     finally:
-        session.close() 
+        session.close()
